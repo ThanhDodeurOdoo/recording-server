@@ -1,6 +1,7 @@
 mod services;
 mod models;
 mod misc;
+mod config;
 
 pub use services::http;
 use tokio;

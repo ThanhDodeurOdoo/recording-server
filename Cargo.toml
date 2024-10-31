@@ -12,3 +12,4 @@ log = "0.4.22"
 jsonwebtoken = "9.3.0"
 uuid = { version = "1.11.0", features = ["v4"] }
 tokio = { version = "1.41.0", features = ["full"] }
+# mediasoup = "0.17.1"

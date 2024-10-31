@@ -11,9 +11,11 @@ use uuid::Uuid;
 
 use crate::models;
 use crate::misc;
+use crate::config;
 
 use misc::enums::{ WsCloseCode };
 use models::channel::{ Channel, SharedChannels, ChannelStats };
+use config::{ AUTH_KEY };
 
 const API_VERSION: u8 = 1;
 
@@ -175,10 +177,9 @@ struct Claims {
 
 fn auth_verify(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     let validation = Validation::new(Algorithm::HS256);
-    let secret_key = "your-secret-key";
     let token_data = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(secret_key.as_ref()),
+        &DecodingKey::from_secret(AUTH_KEY.as_ref()),
         &validation,
     )?;
     Ok(token_data.claims)
