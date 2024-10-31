@@ -48,4 +48,12 @@ pub static VIDEO_CODECS: Lazy<Option<Vec<String>>> = Lazy::new(|| {
     })
 });
 
+// should be called early to make sure that these variables are available at runtime.
+pub fn initialize_required_globals() {
+    Lazy::force(&AUTH_KEY);
+    Lazy::force(&PUBLIC_IP);
+    Lazy::force(&RTC_INTERFACE);
+    Lazy::force(&HTTP_INTERFACE);
+}
+
 // TODO continue reimplementing https://github.com/odoo/sfu/blob/master/src/config.js

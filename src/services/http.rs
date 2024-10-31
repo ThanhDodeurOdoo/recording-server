@@ -1,7 +1,6 @@
 use actix_web::{web, App, HttpServer, HttpResponse, HttpRequest, Result};
 use actix_web::rt::System;
 use serde::{Serialize, Deserialize};
-use serde_json::json;
 use log::{info, warn, error};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -15,7 +14,7 @@ use crate::config;
 
 use misc::enums::{ WsCloseCode };
 use models::channel::{ Channel, SharedChannels, ChannelStats };
-use config::{ AUTH_KEY };
+use config::{ AUTH_KEY, HTTP_INTERFACE, PORT };
 
 const API_VERSION: u8 = 1;
 
@@ -186,11 +185,7 @@ fn auth_verify(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
 }
 
 pub async fn http() -> std::io::Result<()> {
-    let port = 8080;
-    let http_interface = "127.0.0.1";
-
     info!("starting...");
-
     let channels: SharedChannels = Arc::new(Mutex::new(HashMap::new()));
 
     HttpServer::new(move || {
@@ -213,7 +208,7 @@ pub async fn http() -> std::io::Result<()> {
                 web::post().to(disconnect_handler),
             )
     })
-        .bind((http_interface, port))?
+        .bind((&**HTTP_INTERFACE, *PORT))?
         .run()
         .await
 }
