@@ -1,10 +1,11 @@
+use tokio;
+use env_logger;
+
+mod config;
+mod state;
 mod services;
 mod models;
 mod misc;
-mod config;
-
-use tokio;
-use env_logger;
 
 use services::http;
 use config::{ initialize_required_globals };
