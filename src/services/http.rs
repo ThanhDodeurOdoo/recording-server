@@ -13,8 +13,9 @@ use crate::misc;
 use crate::config;
 
 use misc::enums::{ WsCloseCode };
-use models::channel::{ Channel, SharedChannels, ChannelStats };
+use models::channel::{ Channel, ChannelStats };
 use config::{ AUTH_KEY, HTTP_INTERFACE, PORT };
+use crate::state::CHANNELS;
 
 const API_VERSION: u8 = 1;
 
@@ -32,11 +33,11 @@ async fn noop_handler() -> Result<HttpResponse> {
         .json(response))
 }
 
-async fn stats_handler(channels: web::Data<SharedChannels>) -> Result<HttpResponse> {
-    let channels_lock = channels.lock().unwrap();
+async fn stats_handler() -> Result<HttpResponse> {
+    let channels_lock = CHANNELS.lock().await;
     let channel_stats: Vec<ChannelStats> = channels_lock
         .values()
-        .map(|channel| channel.get_stats())
+        .map(|channel| channel.as_ref().get_stats())
         .collect();
     Ok(HttpResponse::Ok()
         .content_type(ContentType::json())
@@ -57,7 +58,6 @@ struct ChannelResponse {
 async fn channel_handler(
     req: HttpRequest,
     query: web::Query<ChannelParams>,
-    channels: web::Data<SharedChannels>,
 ) -> Result<HttpResponse> {
     let remote_addr = req
         .connection_info()
@@ -85,8 +85,7 @@ async fn channel_handler(
                             &claims.iss,
                             claims.key,
                             query.webRTC.as_deref() != Some("false"),
-                            channels.get_ref().clone(),
-                        );
+                        ).await;
                         let response = ChannelResponse {
                             uuid: channel.uuid.clone(),
                             url: format!("{}://{}", protocol, host),
@@ -118,7 +117,6 @@ struct DisconnectClaims {
 async fn disconnect_handler(
     req: HttpRequest,
     body: web::Bytes,
-    channels: web::Data<SharedChannels>,
 ) -> Result<HttpResponse> {
     let remote_addr = req
         .connection_info()
@@ -131,7 +129,7 @@ async fn disconnect_handler(
         Ok(claims) => {
             if let Some(session_ids_by_channel) = claims.sessionIdsByChannel {
                 for (channel_uuid, session_ids) in session_ids_by_channel {
-                    let mut channels_lock = channels.lock().unwrap();
+                    let mut channels_lock = CHANNELS.lock().await;
                     if let Some(channel) = channels_lock.get_mut(&channel_uuid) {
                         if channel.remote_address != remote_addr {
                             warn!(
@@ -186,11 +184,9 @@ fn auth_verify(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
 
 pub async fn http() -> std::io::Result<()> {
     info!("starting...");
-    let channels: SharedChannels = Arc::new(Mutex::new(HashMap::new()));
 
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(channels.clone()))
             .route(
                 &format!("/v{}/noop", API_VERSION),
                 web::get().to(noop_handler),
