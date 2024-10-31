@@ -1,1 +1,1 @@
-Reimplementing [Odoo's sfu](https://github.com/odoo/sfu/0) in rust.
+Reimplementing [Odoo's sfu](https://github.com/odoo/sfu) in rust.
