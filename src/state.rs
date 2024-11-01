@@ -1,9 +1,8 @@
-use once_cell::sync::Lazy;
+use std::sync::{{ Arc, LazyLock }};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::models::channel::ChannelMap;
 
-pub static CHANNELS: Lazy<ChannelMap> = Lazy::new(|| {
+pub static CHANNELS: LazyLock<ChannelMap> = LazyLock::new(|| {
     Arc::new(Mutex::new(HashMap::new()))
 });
