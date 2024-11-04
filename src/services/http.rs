@@ -1,21 +1,17 @@
 use actix_web::{web, App, HttpServer, HttpResponse, HttpRequest, Result};
-use actix_web::rt::System;
-use serde::{Serialize, Deserialize};
-use log::{info, warn, error};
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use log::{info, error};
 use std::sync::{Arc, Mutex};
-use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 use actix_web::http::header::ContentType;
-use uuid::Uuid;
 
 use crate::models;
 use crate::misc;
 use crate::config;
 
-use misc::enums::{ WsCloseCode };
-use models::channel::{ Channel, ChannelStats };
-use config::{ AUTH_KEY, HTTP_INTERFACE, PORT };
-use crate::state::CHANNELS;
+use config::{ HTTP_INTERFACE, PORT };
+use misc::auth::verify;
+use models::bus::Bus;
+use crate::services::Service;
 
 const API_VERSION: u8 = 1;
 
@@ -24,198 +20,104 @@ struct NoopResponse {
     result: String,
 }
 
-async fn noop_handler() -> Result<HttpResponse> {
-    let response = NoopResponse {
-        result: "ok".to_string(),
-    };
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .json(response))
-}
-
-async fn stats_handler() -> Result<HttpResponse> {
-    let channels_lock = CHANNELS.lock().await;
-    let channel_stats: Vec<ChannelStats> = channels_lock
-        .values()
-        .map(|channel| channel.as_ref().get_stats())
-        .collect();
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .json(channel_stats))
-}
-
 #[derive(Deserialize)]
-struct ChannelParams {
-    webRTC: Option<String>,
+struct Claims {
+    id: String,
 }
 
-#[derive(Serialize)]
-struct ChannelResponse {
-    uuid: String,
-    url: String,
+pub struct HttpService {
+    pub bus: Arc<Mutex<Bus>>,
+    pub name: String,
 }
 
-async fn channel_handler(
-    req: HttpRequest,
-    query: web::Query<ChannelParams>,
-) -> Result<HttpResponse> {
-    let remote_addr = req
-        .connection_info()
-        .realip_remote_addr()
-        .unwrap_or("")
-        .to_string();
-    let host = req.connection_info().host().to_string();
-    let protocol = req.connection_info().scheme().to_string();
-
-    let auth_header = req.headers().get("Authorization");
-    if let Some(auth_value) = auth_header {
-        if let Ok(auth_str) = auth_value.to_str() {
-            if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                return match auth_verify(token) {
-                    Ok(claims) => {
-                        if claims.iss.is_empty() {
-                            warn!(
-                                "{}: missing issuer claim when creating channel",
-                                remote_addr
-                            );
-                            return Ok(HttpResponse::Forbidden().finish());
-                        }
-                        let channel = Channel::create(
-                            &remote_addr,
-                            &claims.iss,
-                            claims.key,
-                            query.webRTC.as_deref() != Some("false"),
-                        ).await;
-                        let response = ChannelResponse {
-                            uuid: channel.uuid.clone(),
-                            url: format!("{}://{}", protocol, host),
-                        };
-                        Ok(HttpResponse::Ok()
-                            .content_type(ContentType::json())
-                            .json(response))
-                    }
-                    Err(err) => {
-                        warn!("[{}] failed to create channel: {}", remote_addr, err);
-                        Ok(HttpResponse::Unauthorized().finish())
-                    }
-                }
-            }
+impl Clone for HttpService {
+    fn clone(&self) -> Self {
+        HttpService {
+            bus: Arc::clone(&self.bus),
+            name: self.name.clone(),
         }
     }
-    warn!(
-        "[{}] failed to create channel: missing or invalid authorization header",
-        remote_addr
-    );
-    Ok(HttpResponse::Unauthorized().finish())
 }
 
-#[derive(Deserialize)]
-struct DisconnectClaims {
-    sessionIdsByChannel: HashMap<String, Vec<u32>>,
+impl Service for HttpService {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn bus(&self) -> Arc<Mutex<Bus>> {
+        Arc::clone(&self.bus)
+    }
+
+    fn handle_message(&self, message: String) {
+        println!("[{}] Handling message: {}", self.name(), message);
+        // Custom handling logic can go here
+    }
+
+    async fn start(self: Arc<Self>) {
+        info!("Starting HTTP Service...");
+        let data = web::Data::new(self.clone());
+        HttpServer::new(move || {
+            App::new()
+                .app_data(data.clone())
+                .route(
+                    &format!("/v{}/noop", API_VERSION),
+                    web::get().to(Self::noop_handler),
+                )
+                .route(
+                    &format!("/v{}/stats", API_VERSION),
+                    web::get().to(Self::stats_handler),
+                )
+                .route(
+                    &format!("/v{}/record", API_VERSION),
+                    web::post().to(Self::record_handler),
+                )
+        })
+            .bind((&**HTTP_INTERFACE, *PORT))
+            .expect("Failed to bind to address")
+            .run()
+            .await
+            .expect("HTTP server failed");
+    }
 }
 
-async fn disconnect_handler(
-    req: HttpRequest,
-    body: web::Bytes,
-) -> Result<HttpResponse> {
-    let remote_addr = req
-        .connection_info()
-        .realip_remote_addr()
-        .unwrap_or("")
-        .to_string();
+impl HttpService {
+    pub fn new(name: String, bus: Arc<Mutex<Bus>>) -> Self {
+        HttpService { name, bus }
+    }
+    pub async fn noop_handler(data: web::Data<HttpService>) -> Result<HttpResponse> {
+        let response = NoopResponse {
+            result: String::from("ok"),
+        };
+        Ok(HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .json(response))
+    }
 
-    let jwt = String::from_utf8(body.to_vec()).unwrap();
-    match auth_verify(&jwt) {
-        Ok(claims) => {
-            if let Some(session_ids_by_channel) = claims.sessionIdsByChannel {
-                for (channel_uuid, session_ids) in session_ids_by_channel {
-                    let mut channels_lock = CHANNELS.lock().await;
-                    if let Some(channel) = channels_lock.get_mut(&channel_uuid) {
-                        if channel.remote_address != remote_addr {
-                            warn!(
-                                "[{}] tried to disconnect sessions from channel {} but is not the owner",
-                                remote_addr, channel_uuid
-                            );
-                            continue;
-                        }
-                        for session_id in session_ids {
-                            if let Some(session) = channel.sessions.get(&session_id) {
-                                session.close(
-                                    WsCloseCode::Kicked,
-                                    &format!("/disconnect by {}", remote_addr),
-                                );
-                            }
-                        }
-                    }
-                }
-                Ok(HttpResponse::Ok().finish())
-            } else {
-                error!(
-                    "[{}] failed to disconnect session: sessionIdsByChannel missing in claims",
-                    remote_addr
-                );
+    async fn stats_handler(data: web::Data<HttpService>) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .json("TODO"))
+    }
+
+    async fn record_handler(
+        data: web::Data<HttpService>,
+        req: HttpRequest,
+        body: web::Bytes,
+    ) -> Result<HttpResponse> {
+        let remote_addr = req
+            .connection_info()
+            .realip_remote_addr()
+            .unwrap_or("")
+            .to_string();
+        let jwt = String::from_utf8(body.to_vec()).unwrap();
+        match verify::<Claims>(&jwt) {
+            Ok(..) => { // claims
+                    Ok(HttpResponse::Ok().finish())
+            }
+            Err(err) => {
+                error!("[{}] failed to disconnect session: {}", remote_addr, err);
                 Ok(HttpResponse::UnprocessableEntity().finish())
             }
         }
-        Err(err) => {
-            error!("[{}] failed to disconnect session: {}", remote_addr, err);
-            Ok(HttpResponse::UnprocessableEntity().finish())
-        }
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct Claims {
-    iss: String,
-    key: Option<String>,
-    #[serde(default)]
-    sessionIdsByChannel: Option<HashMap<String, Vec<u32>>>,
-}
-
-fn auth_verify(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let validation = Validation::new(Algorithm::HS256);
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(AUTH_KEY.as_ref()),
-        &validation,
-    )?;
-    Ok(token_data.claims)
-}
-
-pub async fn http() -> std::io::Result<()> {
-    info!("starting...");
-
-    HttpServer::new(move || {
-        App::new()
-            .route(
-                &format!("/v{}/noop", API_VERSION),
-                web::get().to(noop_handler),
-            )
-            .route(
-                &format!("/v{}/stats", API_VERSION),
-                web::get().to(stats_handler),
-            )
-            .route(
-                &format!("/v{}/channel", API_VERSION),
-                web::get().to(channel_handler),
-            )
-            .route(
-                &format!("/v{}/disconnect", API_VERSION),
-                web::post().to(disconnect_handler),
-            )
-    })
-        .bind((&**HTTP_INTERFACE, *PORT))?
-        .run()
-        .await
-}
-
-pub fn start() -> std::thread::JoinHandle<()> {
-    std::thread::spawn(|| {
-        let sys = System::new();
-        sys.block_on(async {
-            if let Err(e) = http().await {
-                eprintln!("Server error: {}", e);
-            }
-        });
-    })
 }
