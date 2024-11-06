@@ -1,1 +1,1 @@
-Reimplementing [Odoo's sfu](https://github.com/odoo/sfu) in rust.
+Recording client to work alongside [Odoo's sfu](https://github.com/odoo/sfu).
