@@ -21,7 +21,7 @@ pub static PORT: LazyLock<u16> = LazyLock::new(|| {
         .and_then(|port_str| port_str.parse::<u16>().ok())
         .unwrap_or(8070)
 });
-pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| {
+pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| { // could be usize type?
     let env_workers = env::var("NUM_WORKERS")
         .ok()
         .and_then(|num| num.parse::<u16>().ok())
@@ -32,20 +32,6 @@ pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| {
         .unwrap_or(1);
 
     env_workers.min(available_workers)
-});
-pub static AUDIO_CODECS: LazyLock<Option<Vec<String>>> = LazyLock::new(|| {
-    env::var("AUDIO_CODECS").ok().map(|codecs| {
-        codecs.split(',')
-            .map(|codec| codec.trim().to_string())
-            .collect()
-    })
-});
-pub static VIDEO_CODECS: LazyLock<Option<Vec<String>>> = LazyLock::new(|| {
-    env::var("VIDEO_CODECS").ok().map(|codecs| {
-        codecs.split(',')
-            .map(|codec| codec.trim().to_string())
-            .collect()
-    })
 });
 
 // should be called early to make sure that these variables are available at runtime.
