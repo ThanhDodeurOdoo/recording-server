@@ -1,0 +1,10 @@
+* implement mediasoup, router, pipeTransport
+    * implement websocket and authentication
+    * implement Bus compatible with https://github.com/odoo/sfu/blob/master/src/shared/bus.js
+* implement recording + api
+    * implement video transcoding and processing with ffmpeg and pipe transport output
+    * implement storage/downloading system
+* implement transcription feature
+    * whisper-rs?
+    // should probably be done for each individual audio stream out of the transport (before multiplexing with ffmpeg)
+    // so that individual speakers can easily be distinguished.

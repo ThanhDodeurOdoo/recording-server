@@ -1,5 +1,4 @@
 #[repr(u16)]
-#[derive(Debug)]
 pub enum WsCloseCode {
     Clean = 1000,
     Leaving = 1001,
