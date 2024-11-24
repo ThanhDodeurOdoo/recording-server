@@ -1,0 +1,31 @@
+namespace recording;
+
+table RtpCapabilities {
+    codec: string;
+    bitrate: int;
+    // see documentation for more fields
+}
+
+table RecordingPayload {
+    channel_uuid: string (required);
+    capabilities: RtpCapabilities;
+    transport_port: int;
+    transport_host: string;
+}
+
+table CommandPayload {
+    channel_uuid: string (required);
+    name: string;
+}
+
+union Content {
+    RecordingPayload,
+    CommandPayload
+}
+
+table Message {
+    type: string (required);
+    content: Content;
+}
+
+root_type Message;

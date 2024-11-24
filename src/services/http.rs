@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use axum::{
     routing::{get},
     extract::ws::{Message, WebSocketUpgrade, WebSocket},
@@ -8,9 +9,15 @@ use axum::{
 use serde::Serialize;
 use futures_util::StreamExt;
 use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 use log::{info};
 use tokio::spawn;
+use flatbuffers::{FlatBufferBuilder, WIPOffset};
+
 use crate::config::{ HTTP_INTERFACE, PORT };
+use crate::misc::flatbuffer_types;
+use crate::models::remote::{ Remote, REMOTES };
+
 
 const API_VERSION: u8 = 1;
 
@@ -31,6 +38,12 @@ async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
 }
 
 async fn handle_socket(mut socket: WebSocket) {
+    let remote_address = "remote_address_example".to_string(); // Replace with actual remote address
+    let remote = Arc::new(Remote::new(remote_address.clone()));
+    {
+        let mut remotes = REMOTES.lock().unwrap();
+        remotes.insert(remote_address.clone(), remote.clone());
+    }
     while let Some(Ok(msg)) = socket.next().await {
         match msg {
             Message::Ping(ping) => {
@@ -39,10 +52,36 @@ async fn handle_socket(mut socket: WebSocket) {
                 }
             }
             Message::Text(text) => println!("ws message/text: {text}"),
-            Message::Binary(bin) => println!("ws message/binary: {:?}", bin),
+            Message::Binary(bin) => {
+                // Parse the flatbuffer message
+                let data = flatbuffers::root::<flatbuffer_types::recording::Message>(&bin).unwrap();
+                match data.type_() {
+                    "recording" => {
+                        let recording = data.content_as_recording_payload().unwrap();
+                        let channel_uuid = recording.channel_uuid();
+                        let capabilities = recording.capabilities();
+                        let transport_port = recording.transport_port();
+                        let transport_host = recording.transport_host();
+                        let mut remotes = REMOTES.lock().unwrap();
+                        if let Some(remote) = remotes.get_mut(&remote_address) {
+                            remote.start_recording(channel_uuid);
+                        }
+                    }
+                    "command" => {
+                        let command = data.content_as_command_payload().unwrap();
+                        let channel_uuid = command.channel_uuid();
+                        let name = command.name();
+                    }
+                    _ => println!("Unknown type"),
+                }
+
+            }
             _ => break,
         }
     }
+    // Remove the remote when the socket is closed
+    let mut remotes = REMOTES.lock().unwrap();
+    remotes.remove(&remote_address);
 }
 
 pub async fn start() {
