@@ -1,21 +1,16 @@
 use std::collections::HashMap;
 use axum::{
     routing::{get},
-    extract::ws::{Message, WebSocketUpgrade, WebSocket},
-    response::{Html, IntoResponse},
-    http::StatusCode,
+    extract::ws::{WebSocketUpgrade, WebSocket},
+    response::{IntoResponse},
     Router, Json,
 };
 use serde::Serialize;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 use axum::extract::ConnectInfo;
 use log::{info};
-use tokio::spawn;
-use flatbuffers::{FlatBufferBuilder, WIPOffset};
 
 use crate::config::{ HTTP_INTERFACE, PORT };
-use crate::misc::flatbuffer_types;
 use crate::models::remote::Remote;
 
 

@@ -1,4 +1,4 @@
-* implement mediasoup, router, pipeTransport
+* implement mediasoup, router, pipeTransport [may not need any mediasoup dependency, could directly read at ports]
     * implement websocket and authentication
     * implement Bus compatible with https://github.com/odoo/sfu/blob/master/src/shared/bus.js
 * implement recording + api

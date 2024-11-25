@@ -1,15 +1,10 @@
 use std::collections::HashMap;
 use futures_util::StreamExt;
 use axum::extract::ws::{Message, WebSocket};
-use serde::Serialize;
+use log::{info};
 use crate::models::channel::Channel;
 use crate::misc::flatbuffer_types;
 
-#[derive(Serialize)]
-pub struct RemoteStats {
-    uuid: String,
-    channel_count: usize,
-}
 pub struct Remote {
     pub remote_address: String,
     socket: WebSocket,
@@ -32,43 +27,38 @@ impl Remote {
                         return;
                     }
                 }
-                Message::Text(text) => println!("ws message/text: {text}"),
+                Message::Text(text) => info!("{} ws message/text: {}", self.remote_address, text),
                 Message::Binary(bin) => {
                     // Parse the flatbuffer message
                     let data = flatbuffers::root::<flatbuffer_types::recording::Message>(&bin).unwrap();
                     match data.type_() {
                         "recording" => {
+                            // could directly receive ports to listen to (4 video ports max) + audio ports.
                             let recording = data.content_as_recording_payload().unwrap();
                             let channel_uuid = recording.channel_uuid();
-                            let capabilities = recording.capabilities();
-                            let transport_port = recording.transport_port();
-                            let transport_host = recording.transport_host();
                             self.start_recording(channel_uuid);
+                            info!("{} recording started", self.remote_address);
                         }
                         "command" => {
                             let command = data.content_as_command_payload().unwrap();
                             let channel_uuid = command.channel_uuid();
                             let name = command.name();
+                            info!("{} command received: {}", self.remote_address, name);
                         }
-                        _ => println!("Unknown type"),
+                        _ => info!("{} unknown or missing message type", self.remote_address),
                     }
 
                 }
                 _ => break,
             }
         }
+        self.cleanup();
     }
-    pub fn get_stats(&self) -> RemoteStats {
-        RemoteStats {
-            uuid: self.remote_address.clone(),
-            channel_count: self.channels.len(),
-        }
-    }
-    pub fn start_recording(&self, channel_uuid: &str) {
+    fn start_recording(&self, channel_uuid: &str) {
         // check if channel exists, if not create it and start recording, otherwise get the already existing channel and get the url where the recording is available (for streaming or download)
         // this should also generate a new uuid for the recording as one channel may have past different recordings that are temporarily stored even when the channel is removed.
     }
-    pub fn stop_recording(&self, channel_uuid: &str) {
+    fn stop_recording(&self, channel_uuid: &str) {
         // check if channel exists, if it does stop the recording, and return the uuid of the recording
         // this function will be called in the http service, which will store the recording uuid for future reference and routing to download.
     }

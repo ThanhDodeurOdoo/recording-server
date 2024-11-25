@@ -1,1 +1,1 @@
-Recording client to work alongside [Odoo's sfu](https://github.com/odoo/sfu).
+Recording server to work alongside a [Odoo's sfu](https://github.com/odoo/sfu).
