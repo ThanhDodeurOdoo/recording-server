@@ -1,28 +1,61 @@
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, Mutex};
+use futures_util::StreamExt;
+use axum::extract::ws::{Message, WebSocket};
 use serde::Serialize;
 use crate::models::channel::Channel;
-
-pub static REMOTES: LazyLock<Arc<Mutex<HashMap<String, Arc<Remote>>>>> = LazyLock::new(|| {
-    Arc::new(Mutex::new(HashMap::new()))
-});
+use crate::misc::flatbuffer_types;
 
 #[derive(Serialize)]
 pub struct RemoteStats {
     uuid: String,
     channel_count: usize,
 }
-#[derive(Clone)]
 pub struct Remote {
     pub remote_address: String,
+    socket: WebSocket,
     channels: HashMap<String, Channel>, // if a channel is here, a recording is in progress
 }
 
 impl Remote {
-    pub fn new(remote_address: String) -> Remote {
+    pub fn new(remote_address: String, socket: WebSocket) -> Remote {
         Remote {
             remote_address,
             channels: HashMap::new(),
+            socket,
+        }
+    }
+    pub async fn listen(&mut self) {
+        while let Some(Ok(msg)) = self.socket.next().await {
+            match msg {
+                Message::Ping(ping) => {
+                    if self.socket.send(Message::Pong(ping)).await.is_err() {
+                        return;
+                    }
+                }
+                Message::Text(text) => println!("ws message/text: {text}"),
+                Message::Binary(bin) => {
+                    // Parse the flatbuffer message
+                    let data = flatbuffers::root::<flatbuffer_types::recording::Message>(&bin).unwrap();
+                    match data.type_() {
+                        "recording" => {
+                            let recording = data.content_as_recording_payload().unwrap();
+                            let channel_uuid = recording.channel_uuid();
+                            let capabilities = recording.capabilities();
+                            let transport_port = recording.transport_port();
+                            let transport_host = recording.transport_host();
+                            self.start_recording(channel_uuid);
+                        }
+                        "command" => {
+                            let command = data.content_as_command_payload().unwrap();
+                            let channel_uuid = command.channel_uuid();
+                            let name = command.name();
+                        }
+                        _ => println!("Unknown type"),
+                    }
+
+                }
+                _ => break,
+            }
         }
     }
     pub fn get_stats(&self) -> RemoteStats {
@@ -38,5 +71,7 @@ impl Remote {
     pub fn stop_recording(&self, channel_uuid: &str) {
         // check if channel exists, if it does stop the recording, and return the uuid of the recording
         // this function will be called in the http service, which will store the recording uuid for future reference and routing to download.
+    }
+    pub fn cleanup(&self) {
     }
 }
