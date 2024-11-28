@@ -1,0 +1,30 @@
+namespace recording;
+
+table Media {
+    port: int;
+    codec: string (required);
+}
+
+table RecordingPayload {
+    channel_uuid: string (required);
+    origin: string (required);
+    video_medias: [Media] (required);
+    audio_medias: [Media] (required);
+}
+
+table CommandPayload {
+    channel_uuid: string (required);
+    name: string (required);
+}
+
+union Content {
+    RecordingPayload,
+    CommandPayload
+}
+
+table Message {
+    type: string (required);
+    content: Content (required);
+}
+
+root_type Message;

@@ -1,2 +1,2 @@
 pub mod channel;
-mod remote;
+pub mod remote;
