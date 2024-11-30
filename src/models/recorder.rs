@@ -1,5 +1,5 @@
 #[derive(Clone)]
-pub struct Channel {
+pub struct Recorder {
     pub uuid: String,
     pub recording_uuid: String,
     pub remote_address: String,

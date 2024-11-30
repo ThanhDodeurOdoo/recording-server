@@ -2,20 +2,20 @@ use std::collections::HashMap;
 use futures_util::StreamExt;
 use axum::extract::ws::{Message, WebSocket};
 use log::{info};
-use crate::models::channel::Channel;
+use crate::models::recorder::Recorder;
 use crate::misc::flatbuffer_types;
 
 pub struct Remote {
     pub remote_address: String,
     socket: WebSocket,
-    channels: HashMap<String, Channel>, // if a channel is here, a recording is in progress
+    recorders: HashMap<String, Recorder>
 }
 
 impl Remote {
     pub fn new(remote_address: String, socket: WebSocket) -> Remote {
         Remote {
             remote_address,
-            channels: HashMap::new(),
+            recorders: HashMap::new(),
             socket,
         }
     }
