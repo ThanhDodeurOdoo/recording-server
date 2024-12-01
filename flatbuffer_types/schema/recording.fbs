@@ -1,15 +1,17 @@
 namespace recording;
 
-table Media {
-    port: int;
+table MediaSource {
     codec: string (required);
+    label: string;
+    port: int;
 }
 
 table RecordingPayload {
     channel_uuid: string (required);
     origin: string (required);
-    video_medias: [Media] (required);
-    audio_medias: [Media] (required);
+    camera_sources: [MediaSource] (required);
+    screen_sources: [MediaSource] (required);
+    audio_sources: [MediaSource] (required);
 }
 
 table CommandPayload {

@@ -1,6 +1,9 @@
 use std::sync::{{ LazyLock }};
 use std::env;
 use std::thread;
+use std::path::PathBuf;
+use std::time::Duration;
+use std::env::temp_dir;
 
 pub static AUTH_KEY: LazyLock<String> = LazyLock::new(|| {
     env::var("AUTH_KEY").expect("AUTH_KEY environment variable not set")
@@ -32,6 +35,33 @@ pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| { // could be usize typ
         .unwrap_or(1);
 
     env_workers.min(available_workers)
+});
+
+pub struct RecordingConfig {
+    pub directory: PathBuf,
+    pub enabled: bool,
+    pub max_duration: Duration,
+    pub file_ttl: Duration,
+    pub file_type: &'static str,
+    pub video_codec: &'static str,
+    pub audio_codec: &'static str,
+    pub audio_limit: u8,
+    pub camera_limit: u8,
+    pub screen_limit: u8,
+}
+pub static RECORDING_CONFIG: LazyLock<RecordingConfig> = LazyLock::new(|| {
+    RecordingConfig {
+        directory: temp_dir().join("recordings"),
+        enabled: env::var("RECORDING").is_ok(),
+        max_duration: Duration::from_millis(1000 * 60 * 60), // 1 hour
+        file_ttl: Duration::from_millis(1000 * 60 * 60 * 24), // 24 hours
+        file_type: "mp4",
+        video_codec: "libx264",
+        audio_codec: "aac",
+        audio_limit: 20,
+        camera_limit: 4,
+        screen_limit: 1,
+    }
 });
 
 // should be called early to make sure that these variables are available at runtime.
