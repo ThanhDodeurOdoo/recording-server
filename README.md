@@ -10,7 +10,7 @@ Recording server to work alongside an [Odoo's sfu](https://github.com/odoo/sfu).
 # compiling flatbuffer schema
 
 ```bash
-flatc --rust sfu.fbs
+flatc --rust -o src/misc flatbuffers/schema.fbs 
 ```
 
 # compiling the server

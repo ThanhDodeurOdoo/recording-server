@@ -1,4 +1,4 @@
-use crate::misc::flatbuffer_types::sfu;
+use crate::misc::schema_generated::ws_api;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -16,7 +16,7 @@ impl Transcriptor {
             file_uuid: Uuid::new_v4().to_string(),
         }
     }
-    pub fn start_transcript(&self, audio_sources: Vec<sfu::MediaSource>) {
+    pub fn start_transcript(&self, audio_sources: Vec<ws_api::MediaSource>) {
 
     }
     pub fn stop_transcript(&self) {

@@ -1,4 +1,4 @@
-use crate::misc::flatbuffer_types::sfu::MediaSource;
+use crate::misc::schema_generated::ws_api::MediaSource;
 use uuid::Uuid;
 
 #[derive(Clone)]
