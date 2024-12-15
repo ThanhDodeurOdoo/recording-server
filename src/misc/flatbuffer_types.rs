@@ -109,118 +109,135 @@ pub mod recording {
   impl flatbuffers::SimpleToVerifyInSlice for Content {}
   pub struct ContentUnionTableOffset {}
 
-  pub enum MediaOffset {}
+  pub enum MediaSourceOffset {}
   #[derive(Copy, Clone, PartialEq)]
 
-  pub struct Media<'a> {
+  pub struct MediaSource<'a> {
     pub _tab: flatbuffers::Table<'a>,
   }
 
-  impl<'a> flatbuffers::Follow<'a> for Media<'a> {
-    type Inner = Media<'a>;
+  impl<'a> flatbuffers::Follow<'a> for MediaSource<'a> {
+    type Inner = MediaSource<'a>;
     #[inline]
     unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
       Self { _tab: flatbuffers::Table::new(buf, loc) }
     }
   }
 
-  impl<'a> Media<'a> {
-    pub const VT_PORT: flatbuffers::VOffsetT = 4;
-    pub const VT_CODEC: flatbuffers::VOffsetT = 6;
+  impl<'a> MediaSource<'a> {
+    pub const VT_CODEC: flatbuffers::VOffsetT = 4;
+    pub const VT_LABEL: flatbuffers::VOffsetT = 6;
+    pub const VT_PORT: flatbuffers::VOffsetT = 8;
 
     #[inline]
     pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-      Media { _tab: table }
+      MediaSource { _tab: table }
     }
     #[allow(unused_mut)]
     pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
       _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
-      args: &'args MediaArgs<'args>
-    ) -> flatbuffers::WIPOffset<Media<'bldr>> {
-      let mut builder = MediaBuilder::new(_fbb);
-      if let Some(x) = args.codec { builder.add_codec(x); }
+      args: &'args MediaSourceArgs<'args>
+    ) -> flatbuffers::WIPOffset<MediaSource<'bldr>> {
+      let mut builder = MediaSourceBuilder::new(_fbb);
       builder.add_port(args.port);
+      if let Some(x) = args.label { builder.add_label(x); }
+      if let Some(x) = args.codec { builder.add_codec(x); }
       builder.finish()
     }
 
 
     #[inline]
-    pub fn port(&self) -> i32 {
-      // Safety:
-      // Created from valid Table for this object
-      // which contains a valid value in this slot
-      unsafe { self._tab.get::<i32>(Media::VT_PORT, Some(0)).unwrap()}
-    }
-    #[inline]
     pub fn codec(&self) -> &'a str {
       // Safety:
       // Created from valid Table for this object
       // which contains a valid value in this slot
-      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Media::VT_CODEC, None).unwrap()}
+      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(MediaSource::VT_CODEC, None).unwrap()}
+    }
+    #[inline]
+    pub fn label(&self) -> Option<&'a str> {
+      // Safety:
+      // Created from valid Table for this object
+      // which contains a valid value in this slot
+      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(MediaSource::VT_LABEL, None)}
+    }
+    #[inline]
+    pub fn port(&self) -> i32 {
+      // Safety:
+      // Created from valid Table for this object
+      // which contains a valid value in this slot
+      unsafe { self._tab.get::<i32>(MediaSource::VT_PORT, Some(0)).unwrap()}
     }
   }
 
-  impl flatbuffers::Verifiable for Media<'_> {
+  impl flatbuffers::Verifiable for MediaSource<'_> {
     #[inline]
     fn run_verifier(
       v: &mut flatbuffers::Verifier, pos: usize
     ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
       use self::flatbuffers::Verifiable;
       v.visit_table(pos)?
-          .visit_field::<i32>("port", Self::VT_PORT, false)?
           .visit_field::<flatbuffers::ForwardsUOffset<&str>>("codec", Self::VT_CODEC, true)?
+          .visit_field::<flatbuffers::ForwardsUOffset<&str>>("label", Self::VT_LABEL, false)?
+          .visit_field::<i32>("port", Self::VT_PORT, false)?
           .finish();
       Ok(())
     }
   }
-  pub struct MediaArgs<'a> {
-    pub port: i32,
+  pub struct MediaSourceArgs<'a> {
     pub codec: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub label: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub port: i32,
   }
-  impl<'a> Default for MediaArgs<'a> {
+  impl<'a> Default for MediaSourceArgs<'a> {
     #[inline]
     fn default() -> Self {
-      MediaArgs {
-        port: 0,
+      MediaSourceArgs {
         codec: None, // required field
+        label: None,
+        port: 0,
       }
     }
   }
 
-  pub struct MediaBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  pub struct MediaSourceBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
     fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
     start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
   }
-  impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaBuilder<'a, 'b, A> {
-    #[inline]
-    pub fn add_port(&mut self, port: i32) {
-      self.fbb_.push_slot::<i32>(Media::VT_PORT, port, 0);
-    }
+  impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourceBuilder<'a, 'b, A> {
     #[inline]
     pub fn add_codec(&mut self, codec: flatbuffers::WIPOffset<&'b  str>) {
-      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Media::VT_CODEC, codec);
+      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSource::VT_CODEC, codec);
     }
     #[inline]
-    pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> MediaBuilder<'a, 'b, A> {
+    pub fn add_label(&mut self, label: flatbuffers::WIPOffset<&'b  str>) {
+      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSource::VT_LABEL, label);
+    }
+    #[inline]
+    pub fn add_port(&mut self, port: i32) {
+      self.fbb_.push_slot::<i32>(MediaSource::VT_PORT, port, 0);
+    }
+    #[inline]
+    pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> MediaSourceBuilder<'a, 'b, A> {
       let start = _fbb.start_table();
-      MediaBuilder {
+      MediaSourceBuilder {
         fbb_: _fbb,
         start_: start,
       }
     }
     #[inline]
-    pub fn finish(self) -> flatbuffers::WIPOffset<Media<'a>> {
+    pub fn finish(self) -> flatbuffers::WIPOffset<MediaSource<'a>> {
       let o = self.fbb_.end_table(self.start_);
-      self.fbb_.required(o, Media::VT_CODEC,"codec");
+      self.fbb_.required(o, MediaSource::VT_CODEC,"codec");
       flatbuffers::WIPOffset::new(o.value())
     }
   }
 
-  impl core::fmt::Debug for Media<'_> {
+  impl core::fmt::Debug for MediaSource<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-      let mut ds = f.debug_struct("Media");
-      ds.field("port", &self.port());
+      let mut ds = f.debug_struct("MediaSource");
       ds.field("codec", &self.codec());
+      ds.field("label", &self.label());
+      ds.field("port", &self.port());
       ds.finish()
     }
   }
@@ -242,8 +259,9 @@ pub mod recording {
   impl<'a> RecordingPayload<'a> {
     pub const VT_CHANNEL_UUID: flatbuffers::VOffsetT = 4;
     pub const VT_ORIGIN: flatbuffers::VOffsetT = 6;
-    pub const VT_VIDEO_MEDIAS: flatbuffers::VOffsetT = 8;
-    pub const VT_AUDIO_MEDIAS: flatbuffers::VOffsetT = 10;
+    pub const VT_CAMERA_SOURCES: flatbuffers::VOffsetT = 8;
+    pub const VT_SCREEN_SOURCES: flatbuffers::VOffsetT = 10;
+    pub const VT_AUDIO_SOURCES: flatbuffers::VOffsetT = 12;
 
     #[inline]
     pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -255,8 +273,9 @@ pub mod recording {
       args: &'args RecordingPayloadArgs<'args>
     ) -> flatbuffers::WIPOffset<RecordingPayload<'bldr>> {
       let mut builder = RecordingPayloadBuilder::new(_fbb);
-      if let Some(x) = args.audio_medias { builder.add_audio_medias(x); }
-      if let Some(x) = args.video_medias { builder.add_video_medias(x); }
+      if let Some(x) = args.audio_sources { builder.add_audio_sources(x); }
+      if let Some(x) = args.screen_sources { builder.add_screen_sources(x); }
+      if let Some(x) = args.camera_sources { builder.add_camera_sources(x); }
       if let Some(x) = args.origin { builder.add_origin(x); }
       if let Some(x) = args.channel_uuid { builder.add_channel_uuid(x); }
       builder.finish()
@@ -278,18 +297,25 @@ pub mod recording {
       unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RecordingPayload::VT_ORIGIN, None).unwrap()}
     }
     #[inline]
-    pub fn video_medias(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media<'a>>> {
+    pub fn camera_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
       // Safety:
       // Created from valid Table for this object
       // which contains a valid value in this slot
-      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media>>>>(RecordingPayload::VT_VIDEO_MEDIAS, None).unwrap()}
+      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_CAMERA_SOURCES, None).unwrap()}
     }
     #[inline]
-    pub fn audio_medias(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media<'a>>> {
+    pub fn screen_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
       // Safety:
       // Created from valid Table for this object
       // which contains a valid value in this slot
-      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media>>>>(RecordingPayload::VT_AUDIO_MEDIAS, None).unwrap()}
+      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_SCREEN_SOURCES, None).unwrap()}
+    }
+    #[inline]
+    pub fn audio_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
+      // Safety:
+      // Created from valid Table for this object
+      // which contains a valid value in this slot
+      unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_AUDIO_SOURCES, None).unwrap()}
     }
   }
 
@@ -302,8 +328,9 @@ pub mod recording {
       v.visit_table(pos)?
           .visit_field::<flatbuffers::ForwardsUOffset<&str>>("channel_uuid", Self::VT_CHANNEL_UUID, true)?
           .visit_field::<flatbuffers::ForwardsUOffset<&str>>("origin", Self::VT_ORIGIN, true)?
-          .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<Media>>>>("video_medias", Self::VT_VIDEO_MEDIAS, true)?
-          .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<Media>>>>("audio_medias", Self::VT_AUDIO_MEDIAS, true)?
+          .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("camera_sources", Self::VT_CAMERA_SOURCES, true)?
+          .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("screen_sources", Self::VT_SCREEN_SOURCES, true)?
+          .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("audio_sources", Self::VT_AUDIO_SOURCES, true)?
           .finish();
       Ok(())
     }
@@ -311,8 +338,9 @@ pub mod recording {
   pub struct RecordingPayloadArgs<'a> {
     pub channel_uuid: Option<flatbuffers::WIPOffset<&'a str>>,
     pub origin: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub video_medias: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media<'a>>>>>,
-    pub audio_medias: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<Media<'a>>>>>,
+    pub camera_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+    pub screen_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+    pub audio_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
   }
   impl<'a> Default for RecordingPayloadArgs<'a> {
     #[inline]
@@ -320,8 +348,9 @@ pub mod recording {
       RecordingPayloadArgs {
         channel_uuid: None, // required field
         origin: None, // required field
-        video_medias: None, // required field
-        audio_medias: None, // required field
+        camera_sources: None, // required field
+        screen_sources: None, // required field
+        audio_sources: None, // required field
       }
     }
   }
@@ -340,12 +369,16 @@ pub mod recording {
       self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_ORIGIN, origin);
     }
     #[inline]
-    pub fn add_video_medias(&mut self, video_medias: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<Media<'b >>>>) {
-      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_VIDEO_MEDIAS, video_medias);
+    pub fn add_camera_sources(&mut self, camera_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_CAMERA_SOURCES, camera_sources);
     }
     #[inline]
-    pub fn add_audio_medias(&mut self, audio_medias: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<Media<'b >>>>) {
-      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_AUDIO_MEDIAS, audio_medias);
+    pub fn add_screen_sources(&mut self, screen_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_SCREEN_SOURCES, screen_sources);
+    }
+    #[inline]
+    pub fn add_audio_sources(&mut self, audio_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+      self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_AUDIO_SOURCES, audio_sources);
     }
     #[inline]
     pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> RecordingPayloadBuilder<'a, 'b, A> {
@@ -360,8 +393,9 @@ pub mod recording {
       let o = self.fbb_.end_table(self.start_);
       self.fbb_.required(o, RecordingPayload::VT_CHANNEL_UUID,"channel_uuid");
       self.fbb_.required(o, RecordingPayload::VT_ORIGIN,"origin");
-      self.fbb_.required(o, RecordingPayload::VT_VIDEO_MEDIAS,"video_medias");
-      self.fbb_.required(o, RecordingPayload::VT_AUDIO_MEDIAS,"audio_medias");
+      self.fbb_.required(o, RecordingPayload::VT_CAMERA_SOURCES,"camera_sources");
+      self.fbb_.required(o, RecordingPayload::VT_SCREEN_SOURCES,"screen_sources");
+      self.fbb_.required(o, RecordingPayload::VT_AUDIO_SOURCES,"audio_sources");
       flatbuffers::WIPOffset::new(o.value())
     }
   }
@@ -371,8 +405,9 @@ pub mod recording {
       let mut ds = f.debug_struct("RecordingPayload");
       ds.field("channel_uuid", &self.channel_uuid());
       ds.field("origin", &self.origin());
-      ds.field("video_medias", &self.video_medias());
-      ds.field("audio_medias", &self.audio_medias());
+      ds.field("camera_sources", &self.camera_sources());
+      ds.field("screen_sources", &self.screen_sources());
+      ds.field("audio_sources", &self.audio_sources());
       ds.finish()
     }
   }

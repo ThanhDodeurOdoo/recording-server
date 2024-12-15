@@ -36,7 +36,10 @@ impl Remote {
                             // could directly receive ports to listen to (4 video ports max) + audio ports.
                             let recording = data.content_as_recording_payload().unwrap();
                             let channel_uuid = recording.channel_uuid();
-                            self.start_recording(channel_uuid);
+                            let audio_sources: Vec<_> = recording.audio_sources().iter().collect();
+                            let camera_sources: Vec<_> = recording.camera_sources().iter().collect();
+                            let screen_sources: Vec<_> = recording.screen_sources().iter().collect();
+                            self.start_recording(channel_uuid, audio_sources, camera_sources, screen_sources);
                             info!("{} recording started", self.remote_address);
                         }
                         "command" => {
@@ -54,13 +57,14 @@ impl Remote {
         }
         self.cleanup();
     }
-    fn start_recording(&self, channel_uuid: &str) {
-        // check if channel exists, if not create it and start recording, otherwise get the already existing channel and get the url where the recording is available (for streaming or download)
-        // this should also generate a new uuid for the recording as one channel may have past different recordings that are temporarily stored even when the channel is removed.
+    fn start_recording(&mut self, channel_uuid: &str, audio_sources: Vec<flatbuffer_types::recording::MediaSource>, camera_sources: Vec<flatbuffer_types::recording::MediaSource>, screen_sources: Vec<flatbuffer_types::recording::MediaSource>) {
+        let recorder = self.recorders.entry(channel_uuid.to_string()).or_insert_with(|| Recorder::new(channel_uuid.to_string(), self.remote_address.clone()));
+        recorder.start_recording(audio_sources, camera_sources, screen_sources);
     }
-    fn stop_recording(&self, channel_uuid: &str) {
-        // check if channel exists, if it does stop the recording, and return the uuid of the recording
-        // this function will be called in the http service, which will store the recording uuid for future reference and routing to download.
+    fn stop_recording(&mut self, channel_uuid: &str) {
+        let mut recorder = self.recorders.get(channel_uuid).unwrap();
+        recorder.stop_recording();
+        self.recorders.remove(channel_uuid);
     }
     pub fn cleanup(&self) {
     }

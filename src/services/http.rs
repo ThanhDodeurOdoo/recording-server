@@ -18,12 +18,12 @@ const API_VERSION: u8 = 1;
 
 #[derive(Serialize)]
 struct NoopResponse {
-    result: String,
+    result: &'static str,
 }
 
 async fn noop_handler() -> impl IntoResponse {
     let response = NoopResponse {
-        result: "ok".to_string(),
+        result: "ok",
     };
     Json(response)
 }
@@ -50,5 +50,7 @@ pub async fn start() {
     let listener = tokio::net::TcpListener::bind((&**HTTP_INTERFACE, *PORT)).await.unwrap();
     let addr = listener.local_addr().unwrap();
     info!("Server running at {addr}");
-    axum::serve(listener, app).await.unwrap();
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("http server error: {}", e);
+    }
 }

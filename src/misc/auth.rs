@@ -3,6 +3,7 @@ use serde::de::DeserializeOwned;
 use crate::config::AUTH_KEY;
 use std::ops::Deref;
 
+// TODO may not need JWT if the recording server API is network isolated.
 pub fn verify<T>(token: &str) -> Result<T, jsonwebtoken::errors::Error>
 where
     T: DeserializeOwned,

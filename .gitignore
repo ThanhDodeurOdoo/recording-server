@@ -1,2 +1,3 @@
 /target
 /.idea
+/flatbuffer_types/schema/recording_generated.rs

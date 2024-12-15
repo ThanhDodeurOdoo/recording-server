@@ -40,9 +40,7 @@ impl FFMPEG {
             sdp.push(format!("a=rtpmap:{} {}/{}", audio_rtp.payload_type, audio_rtp.codec, audio_rtp.clock_rate));
             sdp.push("a=sendonly".to_string());
         }
-
-        let audio_merge = format!("-c:a aac -b:a 128k -ac 2 -filter_complex amerge=inputs={}", audio_rtps.len());
-        sdp.push(audio_merge);
+        sdp.push(format!("-c:a aac -b:a 128k -ac 2 -filter_complex amerge=inputs={}", audio_rtps.len()));
 
         if !camera_rtps.is_empty() {
             let layout = match camera_rtps.len() {
