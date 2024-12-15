@@ -1,4 +1,4 @@
-namespace recording;
+namespace sfu;
 
 table MediaSource {
     codec: string (required);

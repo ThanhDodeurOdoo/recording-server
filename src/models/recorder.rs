@@ -18,13 +18,13 @@ impl Recorder {
             file_uuid: Uuid::new_v4().to_string(),
         }
     }
-    pub fn start_recording(&self, audio_sources: Vec<flatbuffer_types::recording::MediaSource>, camera_sources: Vec<flatbuffer_types::recording::MediaSource>, screen_sources: Vec<flatbuffer_types::recording::MediaSource>) {
+    pub fn start_recording(&self, audio_sources: Vec<flatbuffer_types::sfu::MediaSource>, camera_sources: Vec<flatbuffer_types::sfu::MediaSource>, screen_sources: Vec<flatbuffer_types::sfu::MediaSource>) {
         self.start_fragment(audio_sources, camera_sources, screen_sources);
     }
     pub fn stop_recording(&self) {
         // stop recording
     }
-    fn start_fragment(&self, audio_sources: Vec<flatbuffer_types::recording::MediaSource>, camera_sources: Vec<flatbuffer_types::recording::MediaSource>, screen_sources: Vec<flatbuffer_types::recording::MediaSource>) {
+    fn start_fragment(&self, audio_sources: Vec<flatbuffer_types::sfu::MediaSource>, camera_sources: Vec<flatbuffer_types::sfu::MediaSource>, screen_sources: Vec<flatbuffer_types::sfu::MediaSource>) {
         // start fragment
     }
 }

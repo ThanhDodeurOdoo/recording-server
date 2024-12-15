@@ -10,7 +10,7 @@ extern crate flatbuffers;
 use self::flatbuffers::{EndianScalar, Follow};
 
 #[allow(unused_imports, dead_code)]
-pub mod recording {
+pub mod sfu {
 
   use core::mem;
   use core::cmp::Ordering;
@@ -783,5 +783,5 @@ pub mod recording {
   pub fn finish_size_prefixed_message_buffer<'a, 'b, A: flatbuffers::Allocator + 'a>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>, root: flatbuffers::WIPOffset<Message<'a>>) {
     fbb.finish_size_prefixed(root, None);
   }
-}  // pub mod recording
+}  // pub mod sfu
 
