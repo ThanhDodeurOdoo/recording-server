@@ -3,7 +3,7 @@ use futures_util::StreamExt;
 use axum::extract::ws::{Message, WebSocket};
 use log::{info};
 use crate::models::{recorder::Recorder, transcriptor::Transcriptor};
-use crate::misc::flatbuffer_types;
+use crate::misc::flatbuffer_types::sfu;
 
 pub struct Remote {
     pub remote_address: String,
@@ -32,7 +32,7 @@ impl Remote {
                 Message::Text(text) => info!("{} ws message/text: {}", self.remote_address, text),
                 Message::Binary(bin) => {
                     // Parse the flatbuffer message
-                    let data = flatbuffers::root::<flatbuffer_types::sfu::Message>(&bin).unwrap();
+                    let data = flatbuffers::root::<sfu::Message>(&bin).unwrap();
                     match data.type_() {
                         "recording" => {
                             // could directly receive ports to listen to (4 video ports max) + audio ports.
@@ -59,7 +59,7 @@ impl Remote {
         }
         self.cleanup();
     }
-    fn start_recording(&mut self, channel_uuid: &str, audio_sources: Vec<flatbuffer_types::sfu::MediaSource>, camera_sources: Vec<flatbuffer_types::sfu::MediaSource>, screen_sources: Vec<flatbuffer_types::sfu::MediaSource>) {
+    fn start_recording(&mut self, channel_uuid: &str, audio_sources: Vec<sfu::MediaSource>, camera_sources: Vec<sfu::MediaSource>, screen_sources: Vec<sfu::MediaSource>) {
         let recorder = self.recorders.entry(channel_uuid.to_string()).or_insert_with(|| Recorder::new(channel_uuid.to_string(), self.remote_address.clone()));
         recorder.start_recording(audio_sources, camera_sources, screen_sources);
     }
