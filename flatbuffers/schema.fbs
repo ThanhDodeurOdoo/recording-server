@@ -1,4 +1,4 @@
-namespace recording;
+namespace ws_api;
 
 table MediaSource {
     codec: string (required);

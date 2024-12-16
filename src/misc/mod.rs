@@ -1,3 +1,3 @@
 pub mod enums;
-pub mod flatbuffer_types;
+pub mod schema_generated;
 pub mod auth;

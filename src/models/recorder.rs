@@ -1,4 +1,4 @@
-use crate::misc::flatbuffer_types;
+use crate::misc::schema_generated::ws_api::MediaSource;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -18,13 +18,13 @@ impl Recorder {
             file_uuid: Uuid::new_v4().to_string(),
         }
     }
-    pub fn start_recording(&self, audio_sources: Vec<flatbuffer_types::recording::MediaSource>, camera_sources: Vec<flatbuffer_types::recording::MediaSource>, screen_sources: Vec<flatbuffer_types::recording::MediaSource>) {
+    pub fn start_recording(&self, audio_sources: Vec<MediaSource>, camera_sources: Vec<MediaSource>, screen_sources: Vec<MediaSource>) {
         self.start_fragment(audio_sources, camera_sources, screen_sources);
     }
     pub fn stop_recording(&self) {
         // stop recording
     }
-    fn start_fragment(&self, audio_sources: Vec<flatbuffer_types::recording::MediaSource>, camera_sources: Vec<flatbuffer_types::recording::MediaSource>, screen_sources: Vec<flatbuffer_types::recording::MediaSource>) {
+    fn start_fragment(&self, audio_sources: Vec<MediaSource>, camera_sources: Vec<MediaSource>, screen_sources: Vec<MediaSource>) {
         // start fragment
     }
 }
