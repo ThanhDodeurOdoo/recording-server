@@ -1,13 +1,12 @@
-use tokio;
-use env_logger;
+#![warn(clippy::pedantic)]
 
 mod config;
-mod services;
-mod models;
 mod misc;
+mod models;
+mod services;
 
+use config::initialize_required_globals;
 use services::http;
-use config::{ initialize_required_globals };
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {

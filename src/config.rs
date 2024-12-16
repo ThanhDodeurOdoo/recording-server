@@ -1,16 +1,15 @@
-use std::sync::{{ LazyLock }};
+#![allow(clippy::module_name_repetitions)]
 use std::env;
-use std::thread;
-use std::path::PathBuf;
-use std::time::Duration;
 use std::env::temp_dir;
+use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::thread;
+use std::time::Duration;
 
-pub static AUTH_KEY: LazyLock<String> = LazyLock::new(|| {
-    env::var("AUTH_KEY").expect("AUTH_KEY environment variable not set")
-});
-pub static PUBLIC_IP: LazyLock<String> = LazyLock::new(|| {
-    env::var("PUBLIC_IP").expect("PUBLIC_IP environment variable not set")
-});
+pub static AUTH_KEY: LazyLock<String> =
+    LazyLock::new(|| env::var("AUTH_KEY").expect("AUTH_KEY environment variable not set"));
+pub static PUBLIC_IP: LazyLock<String> =
+    LazyLock::new(|| env::var("PUBLIC_IP").expect("PUBLIC_IP environment variable not set"));
 pub static RTC_INTERFACE: LazyLock<String> = LazyLock::new(|| {
     env::var("RTC_INTERFACE").expect("RTC_INTERFACE environment variable not set")
 });
@@ -19,20 +18,14 @@ pub static HTTP_INTERFACE: LazyLock<String> = LazyLock::new(|| {
     env::var("HTTP_INTERFACE").expect("HTTP_INTERFACE environment variable not set")
 });
 pub static PORT: LazyLock<u16> = LazyLock::new(|| {
-    env::var("PORT")
-        .ok()
-        .and_then(|port_str| port_str.parse::<u16>().ok())
-        .unwrap_or(8070)
+    env::var("PORT").ok().and_then(|port_str| port_str.parse::<u16>().ok()).unwrap_or(8070)
 });
-pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| { // could be usize type?
-    let env_workers = env::var("NUM_WORKERS")
-        .ok()
-        .and_then(|num| num.parse::<u16>().ok())
-        .unwrap_or(u16::MAX);
+pub static NUM_WORKERS: LazyLock<u16> = LazyLock::new(|| {
+    // could be usize type?
+    let env_workers =
+        env::var("NUM_WORKERS").ok().and_then(|num| num.parse::<u16>().ok()).unwrap_or(u16::MAX);
 
-    let available_workers = thread::available_parallelism()
-        .map(|n| n.get() as u16)
-        .unwrap_or(1);
+    let available_workers = thread::available_parallelism().map(|n| n.get() as u16).unwrap_or(1);
 
     env_workers.min(available_workers)
 });
@@ -49,7 +42,7 @@ pub struct RecordingConfig {
     pub camera_limit: u8,
     pub screen_limit: u8,
 }
-pub static RECORDING_CONFIG: LazyLock<RecordingConfig> = LazyLock::new(|| {
+pub static RECORDING: LazyLock<RecordingConfig> = LazyLock::new(|| {
     RecordingConfig {
         directory: temp_dir().join("recordings"),
         enabled: env::var("RECORDING").is_ok(),

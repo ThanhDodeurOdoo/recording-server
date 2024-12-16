@@ -1,9 +1,9 @@
+use log::info;
 use uuid::Uuid;
-use log::{info};
 
-use crate::misc::schema_generated::ws_api::{MediaSources};
+use crate::config::RECORDING;
+use crate::misc::schema_generated::ws_api::MediaSources;
 use crate::models::ffmpeg::FFMPEG;
-use crate::config::RECORDING_CONFIG;
 
 #[derive(Clone)]
 pub struct Recorder {
@@ -30,7 +30,12 @@ impl Recorder {
     }
     fn start_fragment(&self, media_sources: MediaSources) {
         info!("fragment starting for {} audio", media_sources.audio().len());
-        let ffmpeg = FFMPEG::new(format!("{}/{}.{}", RECORDING_CONFIG.directory.display(), self.file_uuid, RECORDING_CONFIG.file_type));
+        let ffmpeg = FFMPEG::new(format!(
+            "{}/{}.{}",
+            RECORDING.directory.display(),
+            self.file_uuid,
+            RECORDING.file_type
+        ));
         info!("ffmpeg created at {}", ffmpeg.file_path);
     }
 }

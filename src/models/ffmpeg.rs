@@ -1,8 +1,8 @@
-use tokio::process::{Command, Child};
+use crate::misc::schema_generated::ws_api::MediaSources;
+use log::debug;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
-use log::{debug};
-use crate::misc::schema_generated::ws_api::{MediaSources};
+use tokio::process::{Child, Command};
 
 pub struct FFMPEG {
     pub file_path: String,
@@ -11,24 +11,28 @@ pub struct FFMPEG {
 
 impl FFMPEG {
     pub fn new(file_path: String) -> Self {
-        FFMPEG {
-            file_path,
-            process: None,
-        }
+        FFMPEG { file_path, process: None }
     }
 
     fn format_sdp(media_sources: MediaSources) -> String {
         let audio_rtps = media_sources.audio();
-        let mut sdp: Vec<String> = vec![
-            "v=0 o=- 0 0 IN IP4 127.0.0.1 s=FFmpeg c=IN IP4 127.0.0.1 t=0 0".to_string(),
-        ];
+        let mut sdp: Vec<String> =
+            vec!["v=0 o=- 0 0 IN IP4 127.0.0.1 s=FFmpeg c=IN IP4 127.0.0.1 t=0 0".to_string()];
 
         for audio_rtp in audio_rtps {
             sdp.push(format!("m=audio {} RTP/AVP {}", audio_rtp.port(), audio_rtp.payload_type()));
-            sdp.push(format!("a=rtpmap:{} {}/{}", audio_rtp.payload_type(), audio_rtp.codec(), audio_rtp.clock_rate()));
+            sdp.push(format!(
+                "a=rtpmap:{} {}/{}",
+                audio_rtp.payload_type(),
+                audio_rtp.codec(),
+                audio_rtp.clock_rate()
+            ));
             sdp.push("a=sendonly".to_string());
         }
-        sdp.push(format!("-c:a aac -b:a 128k -ac 2 -filter_complex amerge=inputs={}", audio_rtps.len()));
+        sdp.push(format!(
+            "-c:a aac -b:a 128k -ac 2 -filter_complex amerge=inputs={}",
+            audio_rtps.len()
+        ));
         let camera_rtps = media_sources.camera();
         if !camera_rtps.is_empty() {
             let layout = match camera_rtps.len() {
@@ -40,8 +44,17 @@ impl FFMPEG {
             };
 
             for video_rtp in camera_rtps {
-                sdp.push(format!("m=video {} RTP/AVP {}", video_rtp.port(), video_rtp.payload_type()));
-                sdp.push(format!("a=rtpmap:{} {}/{}", video_rtp.payload_type(), video_rtp.codec(), video_rtp.clock_rate()));
+                sdp.push(format!(
+                    "m=video {} RTP/AVP {}",
+                    video_rtp.port(),
+                    video_rtp.payload_type()
+                ));
+                sdp.push(format!(
+                    "a=rtpmap:{} {}/{}",
+                    video_rtp.payload_type(),
+                    video_rtp.codec(),
+                    video_rtp.clock_rate()
+                ));
                 sdp.push("a=sendonly".to_string());
             }
 
@@ -52,8 +65,12 @@ impl FFMPEG {
         sdp.join("\n")
     }
 
-    pub async fn merge(&mut self, media_sources: MediaSources<'_>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn merge(
+        &mut self,
+        media_sources: MediaSources<'_>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let sdp = Self::format_sdp(media_sources);
+        #[rustfmt::skip]
         let args = vec![
             "-protocol_whitelist", "pipe,udp,rtp",
             "-fflags", "+genpts",
