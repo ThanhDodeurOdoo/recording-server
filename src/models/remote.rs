@@ -31,24 +31,18 @@ impl Remote {
                 }
                 Message::Text(text) => info!("{} ws message/text: {}", self.remote_address, text),
                 Message::Binary(bin) => {
-                    // Parse the flatbuffer message
                     let data = flatbuffers::root::<ws_api::Message>(&bin).unwrap();
-                    match data.type_() {
-                        "recording" => {
-                            // could directly receive ports to listen to (4 video ports max) + audio ports.
+                    match data.action() {
+                        "start-recording" => {
                             let recording = data.content_as_recording_payload().unwrap();
-                            let channel_uuid = recording.channel_uuid();
-                            let audio_sources: Vec<_> = recording.audio_sources().iter().collect();
-                            let camera_sources: Vec<_> = recording.camera_sources().iter().collect();
-                            let screen_sources: Vec<_> = recording.screen_sources().iter().collect();
-                            self.start_recording(channel_uuid, audio_sources, camera_sources, screen_sources);
-                            info!("{} recording started", self.remote_address);
+                            let channel_uuid = data.channel_uuid();
+                            self.start_recording(channel_uuid, recording.media_sources());
+                            info!("{} recording requested for: {}", self.remote_address, channel_uuid);
                         }
-                        "command" => {
-                            let command = data.content_as_command_payload().unwrap();
-                            let channel_uuid = command.channel_uuid();
-                            let name = command.name();
-                            info!("{} command received: {}", self.remote_address, name);
+                        "start-transcript" => {
+                            // let transcription = data.content_as_transcription_payload().unwrap();
+                            let channel_uuid = data.channel_uuid();
+                            info!("{} transcription requested for: {}", self.remote_address, channel_uuid);
                         }
                         _ => info!("{} unknown or missing message type", self.remote_address),
                     }
@@ -59,12 +53,12 @@ impl Remote {
         }
         self.cleanup();
     }
-    fn start_recording(&mut self, channel_uuid: &str, audio_sources: Vec<ws_api::MediaSource>, camera_sources: Vec<ws_api::MediaSource>, screen_sources: Vec<ws_api::MediaSource>) {
+    fn start_recording(&mut self, channel_uuid: &str, media_sources: ws_api::MediaSources) {
         let recorder = self.recorders.entry(channel_uuid.to_string()).or_insert_with(|| Recorder::new(channel_uuid.to_string(), self.remote_address.clone()));
-        recorder.start_recording(audio_sources, camera_sources, screen_sources);
+        recorder.start_recording(media_sources);
     }
     fn stop_recording(&mut self, channel_uuid: &str) {
-        let mut recorder = self.recorders.get(channel_uuid).unwrap();
+        let recorder = self.recorders.get(channel_uuid).unwrap();
         recorder.stop_recording();
         self.recorders.remove(channel_uuid);
     }

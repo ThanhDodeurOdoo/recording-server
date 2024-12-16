@@ -27,7 +27,7 @@ pub const ENUM_MAX_CONTENT: u8 = 2;
 pub const ENUM_VALUES_CONTENT: [Content; 3] = [
   Content::NONE,
   Content::RecordingPayload,
-  Content::CommandPayload,
+  Content::TranscriptionPayload,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -37,21 +37,21 @@ pub struct Content(pub u8);
 impl Content {
   pub const NONE: Self = Self(0);
   pub const RecordingPayload: Self = Self(1);
-  pub const CommandPayload: Self = Self(2);
+  pub const TranscriptionPayload: Self = Self(2);
 
   pub const ENUM_MIN: u8 = 0;
   pub const ENUM_MAX: u8 = 2;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::RecordingPayload,
-    Self::CommandPayload,
+    Self::TranscriptionPayload,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
     match self {
       Self::NONE => Some("NONE"),
       Self::RecordingPayload => Some("RecordingPayload"),
-      Self::CommandPayload => Some("CommandPayload"),
+      Self::TranscriptionPayload => Some("TranscriptionPayload"),
       _ => None,
     }
   }
@@ -125,9 +125,11 @@ impl<'a> flatbuffers::Follow<'a> for MediaSource<'a> {
 }
 
 impl<'a> MediaSource<'a> {
-  pub const VT_CODEC: flatbuffers::VOffsetT = 4;
-  pub const VT_LABEL: flatbuffers::VOffsetT = 6;
-  pub const VT_PORT: flatbuffers::VOffsetT = 8;
+  pub const VT_CLOCK_RATE: flatbuffers::VOffsetT = 4;
+  pub const VT_CODEC: flatbuffers::VOffsetT = 6;
+  pub const VT_LABEL: flatbuffers::VOffsetT = 8;
+  pub const VT_PORT: flatbuffers::VOffsetT = 10;
+  pub const VT_PAYLOAD_TYPE: flatbuffers::VOffsetT = 12;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -139,13 +141,22 @@ impl<'a> MediaSource<'a> {
     args: &'args MediaSourceArgs<'args>
   ) -> flatbuffers::WIPOffset<MediaSource<'bldr>> {
     let mut builder = MediaSourceBuilder::new(_fbb);
-    builder.add_port(args.port);
     if let Some(x) = args.label { builder.add_label(x); }
     if let Some(x) = args.codec { builder.add_codec(x); }
+    builder.add_clock_rate(args.clock_rate);
+    builder.add_port(args.port);
+    builder.add_payload_type(args.payload_type);
     builder.finish()
   }
 
 
+  #[inline]
+  pub fn clock_rate(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(MediaSource::VT_CLOCK_RATE, Some(0)).unwrap()}
+  }
   #[inline]
   pub fn codec(&self) -> &'a str {
     // Safety:
@@ -154,18 +165,25 @@ impl<'a> MediaSource<'a> {
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(MediaSource::VT_CODEC, None).unwrap()}
   }
   #[inline]
-  pub fn label(&self) -> Option<&'a str> {
+  pub fn label(&self) -> &'a str {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(MediaSource::VT_LABEL, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(MediaSource::VT_LABEL, None).unwrap()}
   }
   #[inline]
-  pub fn port(&self) -> i32 {
+  pub fn port(&self) -> u16 {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<i32>(MediaSource::VT_PORT, Some(0)).unwrap()}
+    unsafe { self._tab.get::<u16>(MediaSource::VT_PORT, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn payload_type(&self) -> u8 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(MediaSource::VT_PAYLOAD_TYPE, Some(0)).unwrap()}
   }
 }
 
@@ -176,25 +194,31 @@ impl flatbuffers::Verifiable for MediaSource<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
+     .visit_field::<u32>("clock_rate", Self::VT_CLOCK_RATE, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("codec", Self::VT_CODEC, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("label", Self::VT_LABEL, false)?
-     .visit_field::<i32>("port", Self::VT_PORT, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("label", Self::VT_LABEL, true)?
+     .visit_field::<u16>("port", Self::VT_PORT, false)?
+     .visit_field::<u8>("payload_type", Self::VT_PAYLOAD_TYPE, false)?
      .finish();
     Ok(())
   }
 }
 pub struct MediaSourceArgs<'a> {
+    pub clock_rate: u32,
     pub codec: Option<flatbuffers::WIPOffset<&'a str>>,
     pub label: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub port: i32,
+    pub port: u16,
+    pub payload_type: u8,
 }
 impl<'a> Default for MediaSourceArgs<'a> {
   #[inline]
   fn default() -> Self {
     MediaSourceArgs {
+      clock_rate: 0,
       codec: None, // required field
-      label: None,
+      label: None, // required field
       port: 0,
+      payload_type: 0,
     }
   }
 }
@@ -205,6 +229,10 @@ pub struct MediaSourceBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
 }
 impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourceBuilder<'a, 'b, A> {
   #[inline]
+  pub fn add_clock_rate(&mut self, clock_rate: u32) {
+    self.fbb_.push_slot::<u32>(MediaSource::VT_CLOCK_RATE, clock_rate, 0);
+  }
+  #[inline]
   pub fn add_codec(&mut self, codec: flatbuffers::WIPOffset<&'b  str>) {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSource::VT_CODEC, codec);
   }
@@ -213,8 +241,12 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourceBuilder<'a, 'b, A> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSource::VT_LABEL, label);
   }
   #[inline]
-  pub fn add_port(&mut self, port: i32) {
-    self.fbb_.push_slot::<i32>(MediaSource::VT_PORT, port, 0);
+  pub fn add_port(&mut self, port: u16) {
+    self.fbb_.push_slot::<u16>(MediaSource::VT_PORT, port, 0);
+  }
+  #[inline]
+  pub fn add_payload_type(&mut self, payload_type: u8) {
+    self.fbb_.push_slot::<u8>(MediaSource::VT_PAYLOAD_TYPE, payload_type, 0);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> MediaSourceBuilder<'a, 'b, A> {
@@ -228,6 +260,7 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourceBuilder<'a, 'b, A> {
   pub fn finish(self) -> flatbuffers::WIPOffset<MediaSource<'a>> {
     let o = self.fbb_.end_table(self.start_);
     self.fbb_.required(o, MediaSource::VT_CODEC,"codec");
+    self.fbb_.required(o, MediaSource::VT_LABEL,"label");
     flatbuffers::WIPOffset::new(o.value())
   }
 }
@@ -235,9 +268,145 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourceBuilder<'a, 'b, A> {
 impl core::fmt::Debug for MediaSource<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("MediaSource");
+      ds.field("clock_rate", &self.clock_rate());
       ds.field("codec", &self.codec());
       ds.field("label", &self.label());
       ds.field("port", &self.port());
+      ds.field("payload_type", &self.payload_type());
+      ds.finish()
+  }
+}
+pub enum MediaSourcesOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct MediaSources<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for MediaSources<'a> {
+  type Inner = MediaSources<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> MediaSources<'a> {
+  pub const VT_AUDIO: flatbuffers::VOffsetT = 4;
+  pub const VT_CAMERA: flatbuffers::VOffsetT = 6;
+  pub const VT_SCREEN: flatbuffers::VOffsetT = 8;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    MediaSources { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args MediaSourcesArgs<'args>
+  ) -> flatbuffers::WIPOffset<MediaSources<'bldr>> {
+    let mut builder = MediaSourcesBuilder::new(_fbb);
+    if let Some(x) = args.screen { builder.add_screen(x); }
+    if let Some(x) = args.camera { builder.add_camera(x); }
+    if let Some(x) = args.audio { builder.add_audio(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn audio(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(MediaSources::VT_AUDIO, None).unwrap()}
+  }
+  #[inline]
+  pub fn camera(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(MediaSources::VT_CAMERA, None).unwrap()}
+  }
+  #[inline]
+  pub fn screen(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(MediaSources::VT_SCREEN, None).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for MediaSources<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("audio", Self::VT_AUDIO, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("camera", Self::VT_CAMERA, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("screen", Self::VT_SCREEN, true)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct MediaSourcesArgs<'a> {
+    pub audio: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+    pub camera: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+    pub screen: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+}
+impl<'a> Default for MediaSourcesArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    MediaSourcesArgs {
+      audio: None, // required field
+      camera: None, // required field
+      screen: None, // required field
+    }
+  }
+}
+
+pub struct MediaSourcesBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MediaSourcesBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_audio(&mut self, audio: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSources::VT_AUDIO, audio);
+  }
+  #[inline]
+  pub fn add_camera(&mut self, camera: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSources::VT_CAMERA, camera);
+  }
+  #[inline]
+  pub fn add_screen(&mut self, screen: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MediaSources::VT_SCREEN, screen);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> MediaSourcesBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    MediaSourcesBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<MediaSources<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, MediaSources::VT_AUDIO,"audio");
+    self.fbb_.required(o, MediaSources::VT_CAMERA,"camera");
+    self.fbb_.required(o, MediaSources::VT_SCREEN,"screen");
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for MediaSources<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("MediaSources");
+      ds.field("audio", &self.audio());
+      ds.field("camera", &self.camera());
+      ds.field("screen", &self.screen());
       ds.finish()
   }
 }
@@ -257,11 +426,7 @@ impl<'a> flatbuffers::Follow<'a> for RecordingPayload<'a> {
 }
 
 impl<'a> RecordingPayload<'a> {
-  pub const VT_CHANNEL_UUID: flatbuffers::VOffsetT = 4;
-  pub const VT_ORIGIN: flatbuffers::VOffsetT = 6;
-  pub const VT_CAMERA_SOURCES: flatbuffers::VOffsetT = 8;
-  pub const VT_SCREEN_SOURCES: flatbuffers::VOffsetT = 10;
-  pub const VT_AUDIO_SOURCES: flatbuffers::VOffsetT = 12;
+  pub const VT_MEDIA_SOURCES: flatbuffers::VOffsetT = 4;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -273,49 +438,17 @@ impl<'a> RecordingPayload<'a> {
     args: &'args RecordingPayloadArgs<'args>
   ) -> flatbuffers::WIPOffset<RecordingPayload<'bldr>> {
     let mut builder = RecordingPayloadBuilder::new(_fbb);
-    if let Some(x) = args.audio_sources { builder.add_audio_sources(x); }
-    if let Some(x) = args.screen_sources { builder.add_screen_sources(x); }
-    if let Some(x) = args.camera_sources { builder.add_camera_sources(x); }
-    if let Some(x) = args.origin { builder.add_origin(x); }
-    if let Some(x) = args.channel_uuid { builder.add_channel_uuid(x); }
+    if let Some(x) = args.media_sources { builder.add_media_sources(x); }
     builder.finish()
   }
 
 
   #[inline]
-  pub fn channel_uuid(&self) -> &'a str {
+  pub fn media_sources(&self) -> MediaSources<'a> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RecordingPayload::VT_CHANNEL_UUID, None).unwrap()}
-  }
-  #[inline]
-  pub fn origin(&self) -> &'a str {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RecordingPayload::VT_ORIGIN, None).unwrap()}
-  }
-  #[inline]
-  pub fn camera_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_CAMERA_SOURCES, None).unwrap()}
-  }
-  #[inline]
-  pub fn screen_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_SCREEN_SOURCES, None).unwrap()}
-  }
-  #[inline]
-  pub fn audio_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(RecordingPayload::VT_AUDIO_SOURCES, None).unwrap()}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<MediaSources>>(RecordingPayload::VT_MEDIA_SOURCES, None).unwrap()}
   }
 }
 
@@ -326,31 +459,19 @@ impl flatbuffers::Verifiable for RecordingPayload<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("channel_uuid", Self::VT_CHANNEL_UUID, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("origin", Self::VT_ORIGIN, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("camera_sources", Self::VT_CAMERA_SOURCES, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("screen_sources", Self::VT_SCREEN_SOURCES, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("audio_sources", Self::VT_AUDIO_SOURCES, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<MediaSources>>("media_sources", Self::VT_MEDIA_SOURCES, true)?
      .finish();
     Ok(())
   }
 }
 pub struct RecordingPayloadArgs<'a> {
-    pub channel_uuid: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub origin: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub camera_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
-    pub screen_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
-    pub audio_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
+    pub media_sources: Option<flatbuffers::WIPOffset<MediaSources<'a>>>,
 }
 impl<'a> Default for RecordingPayloadArgs<'a> {
   #[inline]
   fn default() -> Self {
     RecordingPayloadArgs {
-      channel_uuid: None, // required field
-      origin: None, // required field
-      camera_sources: None, // required field
-      screen_sources: None, // required field
-      audio_sources: None, // required field
+      media_sources: None, // required field
     }
   }
 }
@@ -361,24 +482,8 @@ pub struct RecordingPayloadBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
 }
 impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> RecordingPayloadBuilder<'a, 'b, A> {
   #[inline]
-  pub fn add_channel_uuid(&mut self, channel_uuid: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_CHANNEL_UUID, channel_uuid);
-  }
-  #[inline]
-  pub fn add_origin(&mut self, origin: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_ORIGIN, origin);
-  }
-  #[inline]
-  pub fn add_camera_sources(&mut self, camera_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_CAMERA_SOURCES, camera_sources);
-  }
-  #[inline]
-  pub fn add_screen_sources(&mut self, screen_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_SCREEN_SOURCES, screen_sources);
-  }
-  #[inline]
-  pub fn add_audio_sources(&mut self, audio_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RecordingPayload::VT_AUDIO_SOURCES, audio_sources);
+  pub fn add_media_sources(&mut self, media_sources: flatbuffers::WIPOffset<MediaSources<'b >>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<MediaSources>>(RecordingPayload::VT_MEDIA_SOURCES, media_sources);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> RecordingPayloadBuilder<'a, 'b, A> {
@@ -391,11 +496,7 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> RecordingPayloadBuilder<'a, 'b,
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<RecordingPayload<'a>> {
     let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, RecordingPayload::VT_CHANNEL_UUID,"channel_uuid");
-    self.fbb_.required(o, RecordingPayload::VT_ORIGIN,"origin");
-    self.fbb_.required(o, RecordingPayload::VT_CAMERA_SOURCES,"camera_sources");
-    self.fbb_.required(o, RecordingPayload::VT_SCREEN_SOURCES,"screen_sources");
-    self.fbb_.required(o, RecordingPayload::VT_AUDIO_SOURCES,"audio_sources");
+    self.fbb_.required(o, RecordingPayload::VT_MEDIA_SOURCES,"media_sources");
     flatbuffers::WIPOffset::new(o.value())
   }
 }
@@ -403,127 +504,105 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> RecordingPayloadBuilder<'a, 'b,
 impl core::fmt::Debug for RecordingPayload<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("RecordingPayload");
-      ds.field("channel_uuid", &self.channel_uuid());
-      ds.field("origin", &self.origin());
-      ds.field("camera_sources", &self.camera_sources());
-      ds.field("screen_sources", &self.screen_sources());
-      ds.field("audio_sources", &self.audio_sources());
+      ds.field("media_sources", &self.media_sources());
       ds.finish()
   }
 }
-pub enum CommandPayloadOffset {}
+pub enum TranscriptionPayloadOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
-pub struct CommandPayload<'a> {
+pub struct TranscriptionPayload<'a> {
   pub _tab: flatbuffers::Table<'a>,
 }
 
-impl<'a> flatbuffers::Follow<'a> for CommandPayload<'a> {
-  type Inner = CommandPayload<'a>;
+impl<'a> flatbuffers::Follow<'a> for TranscriptionPayload<'a> {
+  type Inner = TranscriptionPayload<'a>;
   #[inline]
   unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
-impl<'a> CommandPayload<'a> {
-  pub const VT_CHANNEL_UUID: flatbuffers::VOffsetT = 4;
-  pub const VT_NAME: flatbuffers::VOffsetT = 6;
+impl<'a> TranscriptionPayload<'a> {
+  pub const VT_AUDIO_SOURCES: flatbuffers::VOffsetT = 4;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-    CommandPayload { _tab: table }
+    TranscriptionPayload { _tab: table }
   }
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args CommandPayloadArgs<'args>
-  ) -> flatbuffers::WIPOffset<CommandPayload<'bldr>> {
-    let mut builder = CommandPayloadBuilder::new(_fbb);
-    if let Some(x) = args.name { builder.add_name(x); }
-    if let Some(x) = args.channel_uuid { builder.add_channel_uuid(x); }
+    args: &'args TranscriptionPayloadArgs<'args>
+  ) -> flatbuffers::WIPOffset<TranscriptionPayload<'bldr>> {
+    let mut builder = TranscriptionPayloadBuilder::new(_fbb);
+    if let Some(x) = args.audio_sources { builder.add_audio_sources(x); }
     builder.finish()
   }
 
 
   #[inline]
-  pub fn channel_uuid(&self) -> &'a str {
+  pub fn audio_sources(&self) -> flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(CommandPayload::VT_CHANNEL_UUID, None).unwrap()}
-  }
-  #[inline]
-  pub fn name(&self) -> &'a str {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(CommandPayload::VT_NAME, None).unwrap()}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource>>>>(TranscriptionPayload::VT_AUDIO_SOURCES, None).unwrap()}
   }
 }
 
-impl flatbuffers::Verifiable for CommandPayload<'_> {
+impl flatbuffers::Verifiable for TranscriptionPayload<'_> {
   #[inline]
   fn run_verifier(
     v: &mut flatbuffers::Verifier, pos: usize
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("channel_uuid", Self::VT_CHANNEL_UUID, true)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<MediaSource>>>>("audio_sources", Self::VT_AUDIO_SOURCES, true)?
      .finish();
     Ok(())
   }
 }
-pub struct CommandPayloadArgs<'a> {
-    pub channel_uuid: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub name: Option<flatbuffers::WIPOffset<&'a str>>,
+pub struct TranscriptionPayloadArgs<'a> {
+    pub audio_sources: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<MediaSource<'a>>>>>,
 }
-impl<'a> Default for CommandPayloadArgs<'a> {
+impl<'a> Default for TranscriptionPayloadArgs<'a> {
   #[inline]
   fn default() -> Self {
-    CommandPayloadArgs {
-      channel_uuid: None, // required field
-      name: None, // required field
+    TranscriptionPayloadArgs {
+      audio_sources: None, // required field
     }
   }
 }
 
-pub struct CommandPayloadBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+pub struct TranscriptionPayloadBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
   fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> CommandPayloadBuilder<'a, 'b, A> {
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> TranscriptionPayloadBuilder<'a, 'b, A> {
   #[inline]
-  pub fn add_channel_uuid(&mut self, channel_uuid: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(CommandPayload::VT_CHANNEL_UUID, channel_uuid);
+  pub fn add_audio_sources(&mut self, audio_sources: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<MediaSource<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TranscriptionPayload::VT_AUDIO_SOURCES, audio_sources);
   }
   #[inline]
-  pub fn add_name(&mut self, name: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(CommandPayload::VT_NAME, name);
-  }
-  #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> CommandPayloadBuilder<'a, 'b, A> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> TranscriptionPayloadBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
-    CommandPayloadBuilder {
+    TranscriptionPayloadBuilder {
       fbb_: _fbb,
       start_: start,
     }
   }
   #[inline]
-  pub fn finish(self) -> flatbuffers::WIPOffset<CommandPayload<'a>> {
+  pub fn finish(self) -> flatbuffers::WIPOffset<TranscriptionPayload<'a>> {
     let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, CommandPayload::VT_CHANNEL_UUID,"channel_uuid");
-    self.fbb_.required(o, CommandPayload::VT_NAME,"name");
+    self.fbb_.required(o, TranscriptionPayload::VT_AUDIO_SOURCES,"audio_sources");
     flatbuffers::WIPOffset::new(o.value())
   }
 }
 
-impl core::fmt::Debug for CommandPayload<'_> {
+impl core::fmt::Debug for TranscriptionPayload<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-    let mut ds = f.debug_struct("CommandPayload");
-      ds.field("channel_uuid", &self.channel_uuid());
-      ds.field("name", &self.name());
+    let mut ds = f.debug_struct("TranscriptionPayload");
+      ds.field("audio_sources", &self.audio_sources());
       ds.finish()
   }
 }
@@ -543,9 +622,11 @@ impl<'a> flatbuffers::Follow<'a> for Message<'a> {
 }
 
 impl<'a> Message<'a> {
-  pub const VT_TYPE_: flatbuffers::VOffsetT = 4;
-  pub const VT_CONTENT_TYPE: flatbuffers::VOffsetT = 6;
-  pub const VT_CONTENT: flatbuffers::VOffsetT = 8;
+  pub const VT_ACTION: flatbuffers::VOffsetT = 4;
+  pub const VT_CHANNEL_UUID: flatbuffers::VOffsetT = 6;
+  pub const VT_ORIGIN: flatbuffers::VOffsetT = 8;
+  pub const VT_CONTENT_TYPE: flatbuffers::VOffsetT = 10;
+  pub const VT_CONTENT: flatbuffers::VOffsetT = 12;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -558,18 +639,34 @@ impl<'a> Message<'a> {
   ) -> flatbuffers::WIPOffset<Message<'bldr>> {
     let mut builder = MessageBuilder::new(_fbb);
     if let Some(x) = args.content { builder.add_content(x); }
-    if let Some(x) = args.type_ { builder.add_type_(x); }
+    if let Some(x) = args.origin { builder.add_origin(x); }
+    if let Some(x) = args.channel_uuid { builder.add_channel_uuid(x); }
+    if let Some(x) = args.action { builder.add_action(x); }
     builder.add_content_type(args.content_type);
     builder.finish()
   }
 
 
   #[inline]
-  pub fn type_(&self) -> &'a str {
+  pub fn action(&self) -> &'a str {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_TYPE_, None).unwrap()}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_ACTION, None).unwrap()}
+  }
+  #[inline]
+  pub fn channel_uuid(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_CHANNEL_UUID, None).unwrap()}
+  }
+  #[inline]
+  pub fn origin(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_ORIGIN, None).unwrap()}
   }
   #[inline]
   pub fn content_type(&self) -> Content {
@@ -579,21 +676,22 @@ impl<'a> Message<'a> {
     unsafe { self._tab.get::<Content>(Message::VT_CONTENT_TYPE, Some(Content::NONE)).unwrap()}
   }
   #[inline]
-  pub fn content(&self) -> flatbuffers::Table<'a> {
+  pub fn content(&self) -> Option<flatbuffers::Table<'a>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Table<'a>>>(Message::VT_CONTENT, None).unwrap()}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Table<'a>>>(Message::VT_CONTENT, None)}
   }
   #[inline]
   #[allow(non_snake_case)]
   pub fn content_as_recording_payload(&self) -> Option<RecordingPayload<'a>> {
     if self.content_type() == Content::RecordingPayload {
-      let u = self.content();
-      // Safety:
-      // Created from a valid Table for this object
-      // Which contains a valid union in this slot
-      Some(unsafe { RecordingPayload::init_from_table(u) })
+      self.content().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { RecordingPayload::init_from_table(t) }
+     })
     } else {
       None
     }
@@ -601,13 +699,14 @@ impl<'a> Message<'a> {
 
   #[inline]
   #[allow(non_snake_case)]
-  pub fn content_as_command_payload(&self) -> Option<CommandPayload<'a>> {
-    if self.content_type() == Content::CommandPayload {
-      let u = self.content();
-      // Safety:
-      // Created from a valid Table for this object
-      // Which contains a valid union in this slot
-      Some(unsafe { CommandPayload::init_from_table(u) })
+  pub fn content_as_transcription_payload(&self) -> Option<TranscriptionPayload<'a>> {
+    if self.content_type() == Content::TranscriptionPayload {
+      self.content().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { TranscriptionPayload::init_from_table(t) }
+     })
     } else {
       None
     }
@@ -622,11 +721,13 @@ impl flatbuffers::Verifiable for Message<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("type_", Self::VT_TYPE_, true)?
-     .visit_union::<Content, _>("content_type", Self::VT_CONTENT_TYPE, "content", Self::VT_CONTENT, true, |key, v, pos| {
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("action", Self::VT_ACTION, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("channel_uuid", Self::VT_CHANNEL_UUID, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("origin", Self::VT_ORIGIN, true)?
+     .visit_union::<Content, _>("content_type", Self::VT_CONTENT_TYPE, "content", Self::VT_CONTENT, false, |key, v, pos| {
         match key {
           Content::RecordingPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<RecordingPayload>>("Content::RecordingPayload", pos),
-          Content::CommandPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<CommandPayload>>("Content::CommandPayload", pos),
+          Content::TranscriptionPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<TranscriptionPayload>>("Content::TranscriptionPayload", pos),
           _ => Ok(()),
         }
      })?
@@ -635,7 +736,9 @@ impl flatbuffers::Verifiable for Message<'_> {
   }
 }
 pub struct MessageArgs<'a> {
-    pub type_: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub action: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub channel_uuid: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub origin: Option<flatbuffers::WIPOffset<&'a str>>,
     pub content_type: Content,
     pub content: Option<flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>>,
 }
@@ -643,9 +746,11 @@ impl<'a> Default for MessageArgs<'a> {
   #[inline]
   fn default() -> Self {
     MessageArgs {
-      type_: None, // required field
+      action: None, // required field
+      channel_uuid: None, // required field
+      origin: None, // required field
       content_type: Content::NONE,
-      content: None, // required field
+      content: None,
     }
   }
 }
@@ -656,8 +761,16 @@ pub struct MessageBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
 }
 impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
   #[inline]
-  pub fn add_type_(&mut self, type_: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_TYPE_, type_);
+  pub fn add_action(&mut self, action: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_ACTION, action);
+  }
+  #[inline]
+  pub fn add_channel_uuid(&mut self, channel_uuid: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_CHANNEL_UUID, channel_uuid);
+  }
+  #[inline]
+  pub fn add_origin(&mut self, origin: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_ORIGIN, origin);
   }
   #[inline]
   pub fn add_content_type(&mut self, content_type: Content) {
@@ -678,8 +791,9 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Message<'a>> {
     let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, Message::VT_TYPE_,"type_");
-    self.fbb_.required(o, Message::VT_CONTENT,"content");
+    self.fbb_.required(o, Message::VT_ACTION,"action");
+    self.fbb_.required(o, Message::VT_CHANNEL_UUID,"channel_uuid");
+    self.fbb_.required(o, Message::VT_ORIGIN,"origin");
     flatbuffers::WIPOffset::new(o.value())
   }
 }
@@ -687,7 +801,9 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
 impl core::fmt::Debug for Message<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("Message");
-      ds.field("type_", &self.type_());
+      ds.field("action", &self.action());
+      ds.field("channel_uuid", &self.channel_uuid());
+      ds.field("origin", &self.origin());
       ds.field("content_type", &self.content_type());
       match self.content_type() {
         Content::RecordingPayload => {
@@ -697,8 +813,8 @@ impl core::fmt::Debug for Message<'_> {
             ds.field("content", &"InvalidFlatbuffer: Union discriminant does not match value.")
           }
         },
-        Content::CommandPayload => {
-          if let Some(x) = self.content_as_command_payload() {
+        Content::TranscriptionPayload => {
+          if let Some(x) = self.content_as_transcription_payload() {
             ds.field("content", &x)
           } else {
             ds.field("content", &"InvalidFlatbuffer: Union discriminant does not match value.")

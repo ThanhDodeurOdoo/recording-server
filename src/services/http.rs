@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use axum::{
     routing::{get},
     extract::ws::{WebSocketUpgrade, WebSocket},
@@ -12,9 +11,6 @@ use log::{info};
 
 use crate::config::{ HTTP_INTERFACE, PORT };
 use crate::models::remote::Remote;
-
-
-const API_VERSION: u8 = 1;
 
 #[derive(Serialize)]
 struct NoopResponse {

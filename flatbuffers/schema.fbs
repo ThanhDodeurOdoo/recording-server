@@ -1,32 +1,37 @@
 namespace ws_api;
 
 table MediaSource {
+    clock_rate: uint32;
     codec: string (required);
-    label: string;
-    port: int;
+    label: string (required);
+    port: uint16;
+    payload_type: uint8;
+}
+
+table MediaSources {
+    audio: [MediaSource] (required);
+    camera: [MediaSource] (required);
+    screen: [MediaSource] (required);
 }
 
 table RecordingPayload {
-    channel_uuid: string (required);
-    origin: string (required);
-    camera_sources: [MediaSource] (required);
-    screen_sources: [MediaSource] (required);
-    audio_sources: [MediaSource] (required);
+    media_sources: MediaSources (required);
 }
 
-table CommandPayload {
-    channel_uuid: string (required);
-    name: string (required);
+table TranscriptionPayload {
+    audio_sources: [MediaSource] (required);
 }
 
 union Content {
     RecordingPayload,
-    CommandPayload
+    TranscriptionPayload
 }
 
 table Message {
-    type: string (required);
-    content: Content (required);
+    action: string (required);
+    channel_uuid: string (required);
+    origin: string (required);
+    content: Content;
 }
 
 root_type Message;
