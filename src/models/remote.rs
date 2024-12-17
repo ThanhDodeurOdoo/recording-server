@@ -2,7 +2,7 @@ use crate::misc::schema_generated::ws_api;
 use crate::models::{recorder::Recorder, transcriptor::Transcriptor};
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::StreamExt;
-use log::info;
+use log::{info, warn};
 use std::collections::HashMap;
 
 pub struct Remote {
@@ -60,9 +60,12 @@ impl Remote {
         recorder.start_recording(media_sources);
     }
     fn stop_recording(&mut self, channel_uuid: &str) {
-        let recorder = self.recorders.get(channel_uuid).unwrap();
-        recorder.stop_recording();
-        self.recorders.remove(channel_uuid);
+        if let Some(recorder) = self.recorders.get(channel_uuid) {
+            recorder.stop_recording();
+            self.recorders.remove(channel_uuid);
+        } else {
+            warn!("Could not stop Recording: recorder not found for channel {}", channel_uuid);
+        }
     }
     pub fn cleanup(&self) {}
 }

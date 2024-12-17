@@ -1,4 +1,5 @@
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::expect_used)]
 use std::env;
 use std::env::temp_dir;
 use std::path::PathBuf;

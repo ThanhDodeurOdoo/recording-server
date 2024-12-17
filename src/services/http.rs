@@ -34,6 +34,7 @@ async fn handle_socket(socket: WebSocket, remote_address: SocketAddr) {
     remote.listen().await;
 }
 
+#[allow(clippy::unwrap_used)] // we can safely unwrap here, as we know the values are set and if they are not, we want to panic
 pub async fn start() {
     let app = Router::new().route("/noop", get(noop_handler)).route("/ws", get(ws_handler));
     let listener = tokio::net::TcpListener::bind((&**HTTP_INTERFACE, *PORT)).await.unwrap();

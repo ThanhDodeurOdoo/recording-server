@@ -1,9 +1,10 @@
 use crate::misc::schema_generated::ws_api::MediaSources;
-use log::debug;
+use log::{debug, warn};
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::{Child, Command};
 
+#[allow(clippy::upper_case_acronyms)]
 pub struct FFMPEG {
     pub file_path: String,
     process: Option<Child>,
@@ -14,7 +15,7 @@ impl FFMPEG {
         FFMPEG { file_path, process: None }
     }
 
-    fn format_sdp(media_sources: MediaSources) -> String {
+    fn format_sdp(media_sources: MediaSources) -> Result<String, String> {
         let audio_rtps = media_sources.audio();
         let mut sdp: Vec<String> =
             vec!["v=0 o=- 0 0 IN IP4 127.0.0.1 s=FFmpeg c=IN IP4 127.0.0.1 t=0 0".to_string()];
@@ -40,7 +41,7 @@ impl FFMPEG {
                 2 => format!("a=filter:complex [0:v]drawtext=text='{}':x=10:y=h-30[v0];[1:v]drawtext=text='{}':x=10:y=h-30[v1];[v0][v1]hstack=inputs=2[v]; -map [v]", camera_rtps.get(0).label(), camera_rtps.get(1).label()),
                 3 => format!("a=filter:complex [0:v]drawtext=text='{}':x=10:y=h-30[v0];[1:v]drawtext=text='{}':x=10:y=h-30[v1];[v0][v1]hstack=inputs=2[top];[2:v]drawtext=text='{}':x=10:y=h-30[v2];[top][v2]vstack=inputs=2[v]; -map [v]", camera_rtps.get(0).label(), camera_rtps.get(1).label(), camera_rtps.get(2).label()),
                 4 => format!("a=filter:complex [0:v]drawtext=text='{}':x=10:y=h-30[v0];[1:v]drawtext=text='{}':x=10:y=h-30[v1];[v0][v1]hstack=inputs=2[top];[2:v]drawtext=text='{}':x=10:y=h-30[v2];[3:v]drawtext=text='{}':x=10:y=h-30[v3];[v2][v3]hstack=inputs=2[bottom];[top][bottom]vstack=inputs=2[v]; -map [v]", camera_rtps.get(0).label(), camera_rtps.get(1).label(), camera_rtps.get(2).label(), camera_rtps.get(3).label()),
-                _ => panic!("unsupported layout for {} videos", camera_rtps.len()),
+                _ => return Err("Unsupported number of camera RTPs".to_string()),
             };
 
             for video_rtp in camera_rtps {
@@ -61,16 +62,15 @@ impl FFMPEG {
             sdp.push(layout);
             sdp.push("-c:v libx264".to_string());
         }
-
-        sdp.join("\n")
+        Ok(sdp.join("\n"))
     }
 
     pub async fn merge(
         &mut self,
         media_sources: MediaSources<'_>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let sdp = Self::format_sdp(media_sources);
-        #[rustfmt::skip]
+        let sdp = Self::format_sdp(media_sources)?;
+        #[rustfmt::skip] // to keep option and value on the same line
         let args = vec![
             "-protocol_whitelist", "pipe,udp,rtp",
             "-fflags", "+genpts",
@@ -96,15 +96,15 @@ impl FFMPEG {
 
         let pid = process.id();
         self.process = Some(process);
-
         debug!("FFMPEG process (pid:{:?}) spawned, outputting to {}", pid, self.file_path);
-
         Ok(())
     }
 
     pub async fn kill(&mut self) {
         if let Some(process) = &mut self.process {
-            process.kill().await.expect("TODO: panic message");
+            if let Err(e) = process.kill().await {
+                warn!("Failed to kill FFMPEG process: {:?}", e);
+            }
         }
     }
 }
