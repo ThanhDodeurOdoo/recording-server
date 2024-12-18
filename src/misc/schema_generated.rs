@@ -21,13 +21,14 @@ pub mod ws_api {
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_CONTENT: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_CONTENT: u8 = 2;
+pub const ENUM_MAX_CONTENT: u8 = 3;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_CONTENT: [Content; 3] = [
+pub const ENUM_VALUES_CONTENT: [Content; 4] = [
   Content::NONE,
   Content::RecordingPayload,
   Content::TranscriptionPayload,
+  Content::RtcPayload,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -38,13 +39,15 @@ impl Content {
   pub const NONE: Self = Self(0);
   pub const RecordingPayload: Self = Self(1);
   pub const TranscriptionPayload: Self = Self(2);
+  pub const RtcPayload: Self = Self(3);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 2;
+  pub const ENUM_MAX: u8 = 3;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::RecordingPayload,
     Self::TranscriptionPayload,
+    Self::RtcPayload,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
@@ -52,6 +55,7 @@ impl Content {
       Self::NONE => Some("NONE"),
       Self::RecordingPayload => Some("RecordingPayload"),
       Self::TranscriptionPayload => Some("TranscriptionPayload"),
+      Self::RtcPayload => Some("RtcPayload"),
       _ => None,
     }
   }
@@ -109,6 +113,95 @@ impl<'a> flatbuffers::Verifiable for Content {
 impl flatbuffers::SimpleToVerifyInSlice for Content {}
 pub struct ContentUnionTableOffset {}
 
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MIN_ACTION: i8 = 0;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MAX_ACTION: i8 = 2;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+#[allow(non_camel_case_types)]
+pub const ENUM_VALUES_ACTION: [Action; 3] = [
+  Action::start_recording,
+  Action::start_transcript,
+  Action::create_rtc_transport,
+];
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+pub struct Action(pub i8);
+#[allow(non_upper_case_globals)]
+impl Action {
+  pub const start_recording: Self = Self(0);
+  pub const start_transcript: Self = Self(1);
+  pub const create_rtc_transport: Self = Self(2);
+
+  pub const ENUM_MIN: i8 = 0;
+  pub const ENUM_MAX: i8 = 2;
+  pub const ENUM_VALUES: &'static [Self] = &[
+    Self::start_recording,
+    Self::start_transcript,
+    Self::create_rtc_transport,
+  ];
+  /// Returns the variant's name or "" if unknown.
+  pub fn variant_name(self) -> Option<&'static str> {
+    match self {
+      Self::start_recording => Some("start_recording"),
+      Self::start_transcript => Some("start_transcript"),
+      Self::create_rtc_transport => Some("create_rtc_transport"),
+      _ => None,
+    }
+  }
+}
+impl core::fmt::Debug for Action {
+  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    if let Some(name) = self.variant_name() {
+      f.write_str(name)
+    } else {
+      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+    }
+  }
+}
+impl<'a> flatbuffers::Follow<'a> for Action {
+  type Inner = Self;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = flatbuffers::read_scalar_at::<i8>(buf, loc);
+    Self(b)
+  }
+}
+
+impl flatbuffers::Push for Action {
+    type Output = Action;
+    #[inline]
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        flatbuffers::emplace_scalar::<i8>(dst, self.0);
+    }
+}
+
+impl flatbuffers::EndianScalar for Action {
+  type Scalar = i8;
+  #[inline]
+  fn to_little_endian(self) -> i8 {
+    self.0.to_le()
+  }
+  #[inline]
+  #[allow(clippy::wrong_self_convention)]
+  fn from_little_endian(v: i8) -> Self {
+    let b = i8::from_le(v);
+    Self(b)
+  }
+}
+
+impl<'a> flatbuffers::Verifiable for Action {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    i8::run_verifier(v, pos)
+  }
+}
+
+impl flatbuffers::SimpleToVerifyInSlice for Action {}
 pub enum MediaSourceOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -606,6 +699,176 @@ impl core::fmt::Debug for TranscriptionPayload<'_> {
       ds.finish()
   }
 }
+pub enum RtcPayloadOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct RtcPayload<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for RtcPayload<'a> {
+  type Inner = RtcPayload<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> RtcPayload<'a> {
+  pub const VT_TRANSPORT_ID: flatbuffers::VOffsetT = 4;
+  pub const VT_ICE_PARAMETERS: flatbuffers::VOffsetT = 6;
+  pub const VT_ICE_CANDIDATES: flatbuffers::VOffsetT = 8;
+  pub const VT_DTLS_PARAMETERS: flatbuffers::VOffsetT = 10;
+  pub const VT_SCTP_PARAMETERS: flatbuffers::VOffsetT = 12;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    RtcPayload { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args RtcPayloadArgs<'args>
+  ) -> flatbuffers::WIPOffset<RtcPayload<'bldr>> {
+    let mut builder = RtcPayloadBuilder::new(_fbb);
+    if let Some(x) = args.sctp_parameters { builder.add_sctp_parameters(x); }
+    if let Some(x) = args.dtls_parameters { builder.add_dtls_parameters(x); }
+    if let Some(x) = args.ice_candidates { builder.add_ice_candidates(x); }
+    if let Some(x) = args.ice_parameters { builder.add_ice_parameters(x); }
+    if let Some(x) = args.transport_id { builder.add_transport_id(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn transport_id(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RtcPayload::VT_TRANSPORT_ID, None).unwrap()}
+  }
+  #[inline]
+  pub fn ice_parameters(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RtcPayload::VT_ICE_PARAMETERS, None).unwrap()}
+  }
+  #[inline]
+  pub fn ice_candidates(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RtcPayload::VT_ICE_CANDIDATES, None).unwrap()}
+  }
+  #[inline]
+  pub fn dtls_parameters(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RtcPayload::VT_DTLS_PARAMETERS, None).unwrap()}
+  }
+  #[inline]
+  pub fn sctp_parameters(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(RtcPayload::VT_SCTP_PARAMETERS, None).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for RtcPayload<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("transport_id", Self::VT_TRANSPORT_ID, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("ice_parameters", Self::VT_ICE_PARAMETERS, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("ice_candidates", Self::VT_ICE_CANDIDATES, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("dtls_parameters", Self::VT_DTLS_PARAMETERS, true)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("sctp_parameters", Self::VT_SCTP_PARAMETERS, true)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct RtcPayloadArgs<'a> {
+    pub transport_id: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub ice_parameters: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub ice_candidates: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub dtls_parameters: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub sctp_parameters: Option<flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for RtcPayloadArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    RtcPayloadArgs {
+      transport_id: None, // required field
+      ice_parameters: None, // required field
+      ice_candidates: None, // required field
+      dtls_parameters: None, // required field
+      sctp_parameters: None, // required field
+    }
+  }
+}
+
+pub struct RtcPayloadBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> RtcPayloadBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_transport_id(&mut self, transport_id: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RtcPayload::VT_TRANSPORT_ID, transport_id);
+  }
+  #[inline]
+  pub fn add_ice_parameters(&mut self, ice_parameters: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RtcPayload::VT_ICE_PARAMETERS, ice_parameters);
+  }
+  #[inline]
+  pub fn add_ice_candidates(&mut self, ice_candidates: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RtcPayload::VT_ICE_CANDIDATES, ice_candidates);
+  }
+  #[inline]
+  pub fn add_dtls_parameters(&mut self, dtls_parameters: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RtcPayload::VT_DTLS_PARAMETERS, dtls_parameters);
+  }
+  #[inline]
+  pub fn add_sctp_parameters(&mut self, sctp_parameters: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(RtcPayload::VT_SCTP_PARAMETERS, sctp_parameters);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> RtcPayloadBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    RtcPayloadBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<RtcPayload<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, RtcPayload::VT_TRANSPORT_ID,"transport_id");
+    self.fbb_.required(o, RtcPayload::VT_ICE_PARAMETERS,"ice_parameters");
+    self.fbb_.required(o, RtcPayload::VT_ICE_CANDIDATES,"ice_candidates");
+    self.fbb_.required(o, RtcPayload::VT_DTLS_PARAMETERS,"dtls_parameters");
+    self.fbb_.required(o, RtcPayload::VT_SCTP_PARAMETERS,"sctp_parameters");
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for RtcPayload<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("RtcPayload");
+      ds.field("transport_id", &self.transport_id());
+      ds.field("ice_parameters", &self.ice_parameters());
+      ds.field("ice_candidates", &self.ice_candidates());
+      ds.field("dtls_parameters", &self.dtls_parameters());
+      ds.field("sctp_parameters", &self.sctp_parameters());
+      ds.finish()
+  }
+}
 pub enum MessageOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -641,18 +904,18 @@ impl<'a> Message<'a> {
     if let Some(x) = args.content { builder.add_content(x); }
     if let Some(x) = args.origin { builder.add_origin(x); }
     if let Some(x) = args.channel_uuid { builder.add_channel_uuid(x); }
-    if let Some(x) = args.action { builder.add_action(x); }
     builder.add_content_type(args.content_type);
+    builder.add_action(args.action);
     builder.finish()
   }
 
 
   #[inline]
-  pub fn action(&self) -> &'a str {
+  pub fn action(&self) -> Action {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_ACTION, None).unwrap()}
+    unsafe { self._tab.get::<Action>(Message::VT_ACTION, Some(Action::start_recording)).unwrap()}
   }
   #[inline]
   pub fn channel_uuid(&self) -> &'a str {
@@ -712,6 +975,21 @@ impl<'a> Message<'a> {
     }
   }
 
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn content_as_rtc_payload(&self) -> Option<RtcPayload<'a>> {
+    if self.content_type() == Content::RtcPayload {
+      self.content().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { RtcPayload::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
 }
 
 impl flatbuffers::Verifiable for Message<'_> {
@@ -721,13 +999,14 @@ impl flatbuffers::Verifiable for Message<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("action", Self::VT_ACTION, true)?
+     .visit_field::<Action>("action", Self::VT_ACTION, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("channel_uuid", Self::VT_CHANNEL_UUID, true)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("origin", Self::VT_ORIGIN, true)?
      .visit_union::<Content, _>("content_type", Self::VT_CONTENT_TYPE, "content", Self::VT_CONTENT, false, |key, v, pos| {
         match key {
           Content::RecordingPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<RecordingPayload>>("Content::RecordingPayload", pos),
           Content::TranscriptionPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<TranscriptionPayload>>("Content::TranscriptionPayload", pos),
+          Content::RtcPayload => v.verify_union_variant::<flatbuffers::ForwardsUOffset<RtcPayload>>("Content::RtcPayload", pos),
           _ => Ok(()),
         }
      })?
@@ -736,7 +1015,7 @@ impl flatbuffers::Verifiable for Message<'_> {
   }
 }
 pub struct MessageArgs<'a> {
-    pub action: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub action: Action,
     pub channel_uuid: Option<flatbuffers::WIPOffset<&'a str>>,
     pub origin: Option<flatbuffers::WIPOffset<&'a str>>,
     pub content_type: Content,
@@ -746,7 +1025,7 @@ impl<'a> Default for MessageArgs<'a> {
   #[inline]
   fn default() -> Self {
     MessageArgs {
-      action: None, // required field
+      action: Action::start_recording,
       channel_uuid: None, // required field
       origin: None, // required field
       content_type: Content::NONE,
@@ -761,8 +1040,8 @@ pub struct MessageBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
 }
 impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
   #[inline]
-  pub fn add_action(&mut self, action: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_ACTION, action);
+  pub fn add_action(&mut self, action: Action) {
+    self.fbb_.push_slot::<Action>(Message::VT_ACTION, action, Action::start_recording);
   }
   #[inline]
   pub fn add_channel_uuid(&mut self, channel_uuid: flatbuffers::WIPOffset<&'b  str>) {
@@ -791,7 +1070,6 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Message<'a>> {
     let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, Message::VT_ACTION,"action");
     self.fbb_.required(o, Message::VT_CHANNEL_UUID,"channel_uuid");
     self.fbb_.required(o, Message::VT_ORIGIN,"origin");
     flatbuffers::WIPOffset::new(o.value())
@@ -815,6 +1093,13 @@ impl core::fmt::Debug for Message<'_> {
         },
         Content::TranscriptionPayload => {
           if let Some(x) = self.content_as_transcription_payload() {
+            ds.field("content", &x)
+          } else {
+            ds.field("content", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        Content::RtcPayload => {
+          if let Some(x) = self.content_as_rtc_payload() {
             ds.field("content", &x)
           } else {
             ds.field("content", &"InvalidFlatbuffer: Union discriminant does not match value.")

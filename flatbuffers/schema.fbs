@@ -1,6 +1,6 @@
 namespace ws_api;
 
-table MediaSource {
+table MediaSource { // TODO pipe everything through a transport, no direct port use.
     clock_rate: uint32;
     codec: string (required);
     label: string (required);
@@ -22,13 +22,25 @@ table TranscriptionPayload {
     audio_sources: [MediaSource] (required);
 }
 
-union Content {
-    RecordingPayload,
-    TranscriptionPayload
+table RtcPayload { // TODO use the right types
+    transport_id: string (required);
+    ice_parameters: string (required);
+    ice_candidates: string (required);
+    dtls_parameters: string (required);
+    sctp_parameters: string (required);
 }
 
+
+union Content {
+    RecordingPayload,
+    TranscriptionPayload,
+    RtcPayload,
+}
+
+enum Action: byte { start_recording, start_transcript, create_rtc_transport }
+
 table Message {
-    action: string (required);
+    action: Action;
     channel_uuid: string (required);
     origin: string (required);
     content: Content;

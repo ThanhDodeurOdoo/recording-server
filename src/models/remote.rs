@@ -17,8 +17,8 @@ impl Remote {
         Remote { remote_address, recorders: HashMap::new(), transcriptors: HashMap::new(), socket }
     }
     pub async fn listen(&mut self) {
-        while let Some(Ok(msg)) = self.socket.next().await {
-            match msg {
+        while let Some(Ok(message)) = self.socket.next().await {
+            match message {
                 Message::Ping(ping) => {
                     if self.socket.send(Message::Pong(ping)).await.is_err() {
                         return;
@@ -26,10 +26,16 @@ impl Remote {
                 }
                 Message::Text(text) => info!("{} ws message/text: {}", self.remote_address, text),
                 Message::Binary(bin) => {
-                    let data = flatbuffers::root::<ws_api::Message>(&bin).unwrap();
+                    let Some(data) = flatbuffers::root::<ws_api::Message>(&bin).ok() else {
+                        warn!("Failed to parse message");
+                        return;
+                    };
                     match data.action() {
-                        "start-recording" => {
-                            let recording = data.content_as_recording_payload().unwrap();
+                        ws_api::Action::start_recording => {
+                            let Some(recording) = data.content_as_recording_payload() else {
+                                warn!("Failed to get recording payload");
+                                return;
+                            };
                             let channel_uuid = data.channel_uuid();
                             self.start_recording(channel_uuid, recording.media_sources());
                             info!(
@@ -37,7 +43,7 @@ impl Remote {
                                 self.remote_address, channel_uuid
                             );
                         }
-                        "start-transcript" => {
+                        ws_api::Action::start_transcript => {
                             // let transcription = data.content_as_transcription_payload().unwrap();
                             let channel_uuid = data.channel_uuid();
                             info!(
