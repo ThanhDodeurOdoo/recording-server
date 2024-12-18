@@ -15,4 +15,4 @@ serde = { version = "1.0.215", features = ["derive"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 futures-util = "0.3.31"
 jsonwebtoken = "9.3.0"
-# ffmpeg-next = "7.1.0" (or crafting all command lines and directly use ffmpeg)
+# mediasoup = "0.17.1" likely needed for routing
