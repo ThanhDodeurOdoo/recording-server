@@ -16,10 +16,6 @@ impl Transcriptor {
             file_uuid: Uuid::new_v4().to_string(),
         }
     }
-    pub fn start_transcript(&self, audio_sources: Vec<ws_api::MediaSource>) {
-
-    }
-    pub fn stop_transcript(&self) {
-
-    }
+    pub fn start_transcript(&self, audio_sources: Vec<ws_api::MediaSource>) {}
+    pub fn stop_transcript(&self) {}
 }
