@@ -64,6 +64,7 @@ pub fn initialize_required_globals() {
     LazyLock::force(&PUBLIC_IP);
     LazyLock::force(&RTC_INTERFACE);
     LazyLock::force(&HTTP_INTERFACE);
+    LazyLock::force(&RECORDING);
 }
 
 // TODO continue reimplementing https://github.com/odoo/sfu/blob/master/src/config.js

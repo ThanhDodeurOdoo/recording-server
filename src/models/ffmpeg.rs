@@ -68,7 +68,7 @@ impl FFMPEG {
     pub async fn merge(
         &mut self,
         media_sources: MediaSources<'_>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<&str, Box<dyn std::error::Error>> {
         let sdp = Self::format_sdp(media_sources)?;
         #[rustfmt::skip] // to keep option and value on the same line
         let args = vec![
@@ -97,7 +97,7 @@ impl FFMPEG {
         let pid = process.id();
         self.process = Some(process);
         debug!("FFMPEG process (pid:{:?}) spawned, outputting to {}", pid, self.file_path);
-        Ok(())
+        Ok(&*self.file_path)
     }
 
     pub async fn kill(&mut self) {

@@ -17,6 +17,7 @@ impl Remote {
         Remote { remote_address, recorders: HashMap::new(), transcriptors: HashMap::new(), socket }
     }
     pub async fn listen(&mut self) {
+        // .next() uses futures_util::StreamExt
         while let Some(Ok(message)) = self.socket.next().await {
             match message {
                 Message::Ping(ping) => {
@@ -27,7 +28,7 @@ impl Remote {
                 Message::Text(text) => info!("{} ws message/text: {}", self.remote_address, text),
                 Message::Binary(bin) => {
                     let Some(data) = flatbuffers::root::<ws_api::Message>(&bin).ok() else {
-                        warn!("Failed to parse message");
+                        warn!("Failed to parse message, message are supposed to be flatbuffers matching the schema of the websocket API");
                         return;
                     };
                     match data.action() {
@@ -37,7 +38,7 @@ impl Remote {
                                 return;
                             };
                             let channel_uuid = data.channel_uuid();
-                            self.start_recording(channel_uuid, recording.media_sources());
+                            self.start_recording(channel_uuid, recording.media_sources()).await;
                             info!(
                                 "{} recording requested for: {}",
                                 self.remote_address, channel_uuid
@@ -59,11 +60,15 @@ impl Remote {
         }
         self.cleanup();
     }
-    fn start_recording(&mut self, channel_uuid: &str, media_sources: ws_api::MediaSources) {
+    async fn start_recording(
+        &mut self,
+        channel_uuid: &str,
+        media_sources: ws_api::MediaSources<'_>,
+    ) {
         let recorder = self.recorders.entry(channel_uuid.to_string()).or_insert_with(|| {
             Recorder::new(channel_uuid.to_string(), self.remote_address.clone())
         });
-        recorder.start_recording(media_sources);
+        recorder.start_recording(media_sources).await;
     }
     fn stop_recording(&mut self, channel_uuid: &str) {
         if let Some(recorder) = self.recorders.get(channel_uuid) {

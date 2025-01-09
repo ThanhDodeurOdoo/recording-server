@@ -17,11 +17,6 @@ struct NoopResponse {
     result: &'static str,
 }
 
-async fn noop_handler() -> impl IntoResponse {
-    let response = NoopResponse { result: "ok" };
-    Json(response)
-}
-
 async fn ws_handler(
     ws: WebSocketUpgrade,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -30,13 +25,16 @@ async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket, remote_address: SocketAddr) {
-    let mut remote = Remote::new(remote_address.to_string(), socket);
-    remote.listen().await;
+    Remote::new(remote_address.to_string(), socket).listen().await;
 }
 
 #[allow(clippy::unwrap_used)] // we can safely unwrap here, as we know the values are set and if they are not, we want to panic
 pub async fn start() {
-    let app = Router::new().route("/noop", get(noop_handler)).route("/ws", get(ws_handler));
+    #[rustfmt::skip]
+    let app = Router::new()
+        .route("/noop", get(|| async { Json(NoopResponse { result: "ok" }) }))
+        .route("/ws", get(ws_handler));
+
     let listener = tokio::net::TcpListener::bind((&**HTTP_INTERFACE, *PORT)).await.unwrap();
     let addr = listener.local_addr().unwrap();
     info!("Server running at {addr}");
