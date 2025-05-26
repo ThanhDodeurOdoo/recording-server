@@ -11,13 +11,11 @@ pub static AUTH_KEY: LazyLock<String> =
     LazyLock::new(|| env::var("AUTH_KEY").expect("AUTH_KEY environment variable not set"));
 pub static PUBLIC_IP: LazyLock<String> =
     LazyLock::new(|| env::var("PUBLIC_IP").expect("PUBLIC_IP environment variable not set"));
-pub static RTC_INTERFACE: LazyLock<String> = LazyLock::new(|| {
-    env::var("RTC_INTERFACE").expect("RTC_INTERFACE environment variable not set")
-});
+pub static RTC_INTERFACE: LazyLock<String> =
+    LazyLock::new(|| env::var("RTC_INTERFACE").unwrap_or_else(|_| "0.0.0.0".to_string()));
 pub static PROXY: LazyLock<bool> = LazyLock::new(|| env::var("PROXY").is_ok());
-pub static HTTP_INTERFACE: LazyLock<String> = LazyLock::new(|| {
-    env::var("HTTP_INTERFACE").expect("HTTP_INTERFACE environment variable not set")
-});
+pub static HTTP_INTERFACE: LazyLock<String> =
+    LazyLock::new(|| env::var("RTC_INTERFACE").unwrap_or_else(|_| "0.0.0.0".to_string()));
 pub static PORT: LazyLock<u16> = LazyLock::new(|| {
     env::var("PORT").ok().and_then(|port_str| port_str.parse::<u16>().ok()).unwrap_or(8070)
 });
