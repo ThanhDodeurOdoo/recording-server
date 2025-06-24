@@ -6,13 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.41.0", features = ["full"] }
-axum = { version = "0.7.7", features = ["ws"] }
-flatbuffers = "24.3.25"
-log = "0.4.22"
-env_logger = "0.11.5"
-serde = { version = "1.0.215", features = ["derive"] }
-uuid = { version = "1.11.0", features = ["v4"] }
+tokio = { version = "1.45.0", features = ["full"] }
+flatbuffers = "25.2.10"
+log = "0.4.27"
+env_logger = "0.11.8"
+serde = { version = "1.0.219", features = ["derive"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 futures-util = "0.3.31"
-jsonwebtoken = "9.3.0"
+jsonwebtoken = "9.3.1"
 # mediasoup = "0.17.1" likely needed for routing
+actix-web = "4.11.0"
+actix-ws = "0.3.0"

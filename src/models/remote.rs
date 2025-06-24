@@ -1,27 +1,34 @@
 use crate::misc::schema_generated::ws_api;
 use crate::models::{recorder::Recorder, transcriptor::Transcriptor};
-use axum::extract::ws::{Message, WebSocket};
+use actix_ws::{Message, MessageStream, Session};
 use futures_util::StreamExt;
 use log::{info, warn};
 use std::collections::HashMap;
 
 pub struct Remote {
     pub remote_address: String,
-    socket: WebSocket,
+    session: Session,
+    msg_stream: MessageStream,
     recorders: HashMap<String, Recorder>,
     transcriptors: HashMap<String, Transcriptor>,
 }
 
 impl Remote {
-    pub fn new(remote_address: String, socket: WebSocket) -> Remote {
-        Remote { remote_address, recorders: HashMap::new(), transcriptors: HashMap::new(), socket }
+    pub fn new(remote_address: String, session: Session, msg_stream: MessageStream) -> Remote {
+        Remote { 
+            remote_address, 
+            recorders: HashMap::new(), 
+            transcriptors: HashMap::new(), 
+            session,
+            msg_stream,
+        }
     }
+    
     pub async fn listen(&mut self) {
-        // .next() uses futures_util::StreamExt
-        while let Some(Ok(message)) = self.socket.next().await {
+        while let Some(Ok(message)) = self.msg_stream.next().await {
             match message {
                 Message::Ping(ping) => {
-                    if self.socket.send(Message::Pong(ping)).await.is_err() {
+                    if self.session.pong(&ping).await.is_err() {
                         return;
                     }
                 }
@@ -55,11 +62,17 @@ impl Remote {
                         _ => info!("{} unknown or missing message type", self.remote_address),
                     }
                 }
-                _ => break,
+                Message::Close(_) => {
+                    break;
+                }
+                _ => {}
             }
         }
+
+        let _ = self.session.clone().close(None).await;
         self.cleanup();
     }
+    
     async fn start_recording(
         &mut self,
         channel_uuid: &str,
@@ -70,6 +83,7 @@ impl Remote {
         });
         recorder.start_recording(media_sources).await;
     }
+    
     fn stop_recording(&mut self, channel_uuid: &str) {
         if let Some(recorder) = self.recorders.get(channel_uuid) {
             recorder.stop_recording();
@@ -78,5 +92,14 @@ impl Remote {
             warn!("Could not stop Recording: recorder not found for channel {}", channel_uuid);
         }
     }
+    
     pub fn cleanup(&self) {}
+    
+    pub async fn send_text(&mut self, text: String) -> Result<(), actix_ws::Closed> {
+        self.session.text(text).await
+    }
+    
+    pub async fn send_binary(&mut self, data: Vec<u8>) -> Result<(), actix_ws::Closed> {
+        self.session.binary(data).await
+    }
 }

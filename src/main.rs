@@ -16,7 +16,5 @@ use services::http;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     initialize_required_globals();
-    http::start().await;
-    std::thread::park();
-    Ok(())
+    http::start().await
 }
